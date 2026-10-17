@@ -38,7 +38,7 @@ def calib_indices(ds, classes, per_class, rng):
     return torch.cat(idx), torch.cat(lab)
 
 
-def collect_stats(model, ds, idx, labels, device, bs=64, tau=10.0):
+def collect_stats(model, ds, idx, labels, device, bs=64, tau=10.0, blocks=None):
     """One calibration pass over (idx, labels).
 
     Per block, per mid channel:
@@ -50,7 +50,7 @@ def collect_stats(model, ds, idx, labels, device, bs=64, tau=10.0):
     The prototypes come from the current model, so no trained head is needed.
     """
     model.eval()
-    blocks = model.blocks
+    blocks = model.blocks if blocks is None else blocks
     for b in blocks:
         b.capture = True
     n = len(idx)
@@ -165,6 +165,28 @@ def allocate_mids(model, target_frac, dense_params, tilt=0.5, caps=None, min_kee
             lo = k
     mids = mids_for(hi if params_for_mids(model, mids_for(hi)) / dense_params <= target_frac * 1.003 else lo)
     return mids
+
+
+def allocate_linear(coefs, cur, full, params_now, dense_params, target_frac, tilt=0.5, min_keep=4):
+    """Same rule as allocate_mids for networks whose parameter count is linear in each block width (MobileNetV2):
+    block b keeps a fraction kappa * (1 - tilt * b / (B - 1)) of its full hidden width, kappa found by bisection."""
+    B = len(coefs)
+    d = np.arange(B) / max(1, B - 1)
+
+    def mids_for(k):
+        return [int(min(cur[i], max(min_keep, round(k * (1 - tilt * d[i]) * full[i])))) for i in range(B)]
+
+    def frac(m):
+        return (params_now + sum(c * (mi - ci) for c, mi, ci in zip(coefs, m, cur))) / dense_params
+
+    lo, hi = 0.0, 2.0 / max(1e-6, 1 - tilt)
+    for _ in range(60):
+        k = 0.5 * (lo + hi)
+        if frac(mids_for(k)) > target_frac:
+            hi = k
+        else:
+            lo = k
+    return mids_for(hi if frac(mids_for(hi)) <= target_frac * 1.003 else lo)
 
 
 def select_keep(scores, mids):

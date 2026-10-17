@@ -122,8 +122,10 @@ def params_for_mids(model_template: PResNet18, mids):
 
 
 @torch.no_grad()
-def prune_model(model: PResNet18, keep):
+def prune_model(model, keep):
     """Return a new model whose block b keeps the mid channels `keep[b]` (sorted LongTensor)."""
+    if isinstance(model, CompactNet):
+        return prune_mbv2(model, keep)
     new = copy.deepcopy(model)
     for blk, idx in zip(new.blocks, keep):
         idx = idx.to(blk.conv1.weight.device)
@@ -176,7 +178,9 @@ class CompactNet(nn.Module):
         tv = getattr(torchvision.models, arch)(weights=weights)
         self.body = tv.features
         self.feat_dim = {"mobilenet_v3_small": 576, "mobilenet_v2": 1280, "efficientnet_b0": 1280}[arch]
+        self.arch = arch
         self.in_ch = in_ch
+        self.full_mids = [b.conv[0][0].out_channels for b in mbv2_blocks(self)] if arch == "mobilenet_v2" else []
         if in_ch != 3:  # same recipe as the ResNet: repeat the RGB filters over the bands and scale by 3/in_ch
             old = self.body[0][0]
             new = nn.Conv2d(in_ch, old.out_channels, old.kernel_size, old.stride, old.padding, bias=old.bias is not None)
@@ -198,8 +202,87 @@ class CompactNet(nn.Module):
         return self.fc(f) if self.fc is not None else f
 
     def mids(self):
-        return []
+        """Hidden (expanded) channels of every prunable inverted-residual block; only MobileNetV2 has them here."""
+        return [b.conv[0][0].out_channels for b in mbv2_blocks(self)] if self.arch == "mobilenet_v2" else []
+
+    def mid_spec(self):
+        """(parameters per hidden channel, current width, full width) for every prunable block."""
+        coefs = [b.conv[0][0].in_channels + b.conv[2].out_channels + 13 for b in mbv2_blocks(self)]
+        return coefs, self.mids(), list(self.full_mids)
 
 
 def make_compact(arch, in_ch=3):
     return CompactNet(arch, in_ch)
+
+
+# ---- MobileNetV2: prune the hidden channels of the inverted residual blocks -------------------------------------
+def mbv2_blocks(model):
+    """Inverted-residual blocks that have an expansion layer; their hidden channels are what we prune."""
+    return [m for m in model.body if m.__class__.__name__ == "InvertedResidual" and len(m.conv) == 4]
+
+
+class MidView:
+    """Lets collect_stats treat a MobileNetV2 block like a ResNet block: conv1 is the expansion convolution, bn1 the
+    depthwise BatchNorm, and `mid` the activation after the depthwise stage (the input of the projection)."""
+
+    def __init__(self, block):
+        self.conv1 = block.conv[0][0]
+        self.bn1 = block.conv[1][1]
+        self.capture = False
+        self.mid = None
+        self._h = block.conv[1].register_forward_hook(self._hook)
+
+    def _hook(self, module, inp, out):
+        if self.capture:
+            self.mid = out
+            if out.requires_grad:
+                out.retain_grad()
+
+    def close(self):
+        self._h.remove()
+
+
+class mbv2_views:
+    """Context manager: temporary MidView adapters for every prunable block of a MobileNetV2."""
+
+    def __init__(self, model):
+        self.model = model
+
+    def __enter__(self):
+        self.views = [MidView(b) for b in mbv2_blocks(self.model)]
+        return self.views
+
+    def __exit__(self, *a):
+        for v in self.views:
+            v.close()
+
+
+@torch.no_grad()
+def prune_mbv2(model, keep):
+    """New MobileNetV2 whose block b keeps the hidden channels keep[b] (expansion, depthwise and projection are cut together)."""
+    new = copy.deepcopy(model)
+    for blk, idx in zip(mbv2_blocks(new), keep):
+        idx = idx.to(blk.conv[0][0].weight.device)
+        k = len(idx)
+        if k == blk.conv[0][0].out_channels:
+            continue
+        exp, bn1 = blk.conv[0][0], blk.conv[0][1]
+        dw, bn2 = blk.conv[1][0], blk.conv[1][1]
+        proj = blk.conv[2]
+        dev = exp.weight.device
+        e2 = nn.Conv2d(exp.in_channels, k, 1, bias=False).to(dev)
+        e2.weight.copy_(exp.weight[idx])
+        d2 = nn.Conv2d(k, k, dw.kernel_size, dw.stride, dw.padding, groups=k, bias=False).to(dev)
+        d2.weight.copy_(dw.weight[idx])
+        p2 = nn.Conv2d(k, proj.out_channels, 1, bias=False).to(dev)
+        p2.weight.copy_(proj.weight[:, idx])
+        for old, nb in ((bn1, nn.BatchNorm2d(k).to(dev)), (bn2, nn.BatchNorm2d(k).to(dev))):
+            for n in ("weight", "bias", "running_mean", "running_var"):
+                getattr(nb, n).copy_(getattr(old, n)[idx])
+            nb.num_batches_tracked.copy_(old.num_batches_tracked)
+            if old is bn1:
+                blk.conv[0][1] = nb
+            else:
+                blk.conv[1][1] = nb
+        blk.conv[0][0], blk.conv[1][0], blk.conv[2] = e2, d2, p2
+    return new

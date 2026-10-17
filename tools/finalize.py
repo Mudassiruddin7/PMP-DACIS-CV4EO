@@ -33,6 +33,7 @@ def main():
     ap.add_argument("zip")
     ap.add_argument("--submission", default=os.path.join(ROOT, "..", "submission"))
     ap.add_argument("--tectonic", default=None)
+    ap.add_argument("--ext", default=None, help="results_extension.zip of the extension notebook (more partitions, pruned MobileNetV2)")
     a = ap.parse_args()
     res = os.path.join(ROOT, "results")
     if os.path.exists(res):
@@ -42,6 +43,17 @@ def main():
     for n in z.namelist():
         if n.startswith(("runs/", "tuning_m_lr", "host.json", "log.txt", "config_used.json", "claims_check.txt", "paper_build_log.txt", "failures.json")):
             z.extract(n, res)
+    if a.ext:
+        ze = zipfile.ZipFile(a.ext)
+        for n in ze.namelist():
+            if n.startswith("runs/"):
+                ze.extract(n, res)
+            elif n == "tuning_m_lr_resisc45_low.json":
+                ze.extract(n, res)
+            elif n == "log.txt":
+                open(os.path.join(res, "log_extension.txt"), "wb").write(ze.read(n))
+            elif n == "failures.json":
+                open(os.path.join(res, "failures_extension.json"), "wb").write(ze.read(n))
     print("unpacked", len(os.listdir(res)), "entries into", res)
     gen = os.path.join(ROOT, "paper", "generated")
     for f in glob.glob(os.path.join(gen, "*")):

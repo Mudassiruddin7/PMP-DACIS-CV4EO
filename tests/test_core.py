@@ -229,6 +229,77 @@ def test_resisc45_variant_runs_end_to_end():
         assert 0 < rec["acc"]["novel_5"]["mean"] <= 100
 
 
+def test_mbv2_surgery_equals_masking_and_budget_is_exact():
+    """Cutting hidden channels of a MobileNetV2 must equal zeroing them after the depthwise stage, and the parameter
+    arithmetic used by the budget solver must be exact."""
+    from pmp_dacis.model import make_compact, mbv2_blocks, prune_mbv2
+    m = make_compact("mobilenet_v2", 3).eval()
+    for mod in m.modules():
+        if isinstance(mod, torch.nn.BatchNorm2d):
+            mod.weight.data.uniform_(0.5, 1.5)
+            mod.bias.data.uniform_(-0.3, 0.3)
+            mod.running_mean.uniform_(-0.2, 0.2)
+            mod.running_var.uniform_(0.5, 1.5)
+    blocks = mbv2_blocks(m)
+    g = torch.Generator().manual_seed(1)
+    keep, hooks = [], []
+    for b in blocks:
+        C = b.conv[0][0].out_channels
+        k = torch.randperm(C, generator=g)[: max(4, C // 3)].sort().values
+        keep.append(k)
+        mk = torch.zeros(C)
+        mk[k] = 1
+        hooks.append(b.conv[1].register_forward_hook(lambda mod, i, o, mk=mk: o * mk.view(1, -1, 1, 1)))
+    x = torch.randn(2, 3, 64, 64)
+    with torch.no_grad():
+        ref = m.features(x)
+    for h in hooks:
+        h.remove()
+    coefs, cur, _ = m.mid_spec()
+    pruned = prune_mbv2(m, keep).eval()
+    with torch.no_grad():
+        out = pruned.features(x)
+    assert torch.allclose(ref, out, atol=1e-4), float((ref - out).abs().max())
+    assert count_params(pruned) == count_params(m) + sum(c * (len(k) - cu) for c, k, cu in zip(coefs, keep, cur))
+    assert pruned.mids() == [len(k) for k in keep]
+
+
+def test_mbv2_allocation_hits_budget():
+    from pmp_dacis.model import make_compact
+    from pmp_dacis.prune import allocate_linear
+    m = make_compact("mobilenet_v2", 3)
+    coefs, cur, full = m.mid_spec()
+    dense = count_params(m)
+    for t in (0.6, 0.4, 0.25):
+        mids = allocate_linear(coefs, cur, full, dense, dense, t)
+        frac = (dense + sum(c * (a - b) for c, a, b in zip(coefs, mids, cur))) / dense
+        assert abs(frac - t) < 0.02, (t, frac)
+
+
+def test_compact_network_pruning_runs_end_to_end():
+    import tempfile
+    from pmp_dacis import data as D
+    from pmp_dacis import experiments as E
+    torch.manual_seed(3)
+    K, per = 45, 20
+    y = torch.arange(K).repeat_interleave(per)
+    X = torch.randint(0, 256, (K * per, 3, 32, 32), dtype=torch.uint8)
+    X[:, 1] = (y.view(-1, 1, 1) * 5).to(torch.uint8)
+    ds = D.DS("resisc45", X, y, [str(i) for i in range(K)], "rgb8", 32)
+    cfg = dict(E.PROFILES["smoke"])
+    cfg.update(rs_res=32, rs_s0_epochs=1, rs_r_epochs=1, rs_m_episodes=4, eval_episodes=20, shots=[1, 5], query=4, bs=32,
+               calib_per_class=4, res_sweep=[32], max_specs=None, amp=False)
+    out = tempfile.mkdtemp()
+    ctx = E.Ctx("resisc45", 0, cfg, torch.device("cpu"), {"resisc45": ds}, out)
+    grid = {s["id"]: s for s in E.grid_for("resisc45")}
+    ref = E.run_spec(ctx, dict(grid["MK_mobilenet_v2_dense"], bench=False))
+    assert abs(ref["param_frac"] - 1.0) < 1e-6
+    for sid, frac in (("MP_taylor_P_40", 0.4), ("MP_dacis_P_25", 0.25), ("MP_random_P_60", 0.6)):
+        rec = E.run_spec(ctx, dict(grid[sid], bench=False))
+        assert abs(rec["param_frac"] - frac) < 0.03, (sid, rec["param_frac"])
+        assert 0 < rec["acc"]["novel_5"]["mean"] <= 100
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_"):

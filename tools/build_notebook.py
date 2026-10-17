@@ -50,7 +50,18 @@ def build_text(anonymous=False):
     return tpl.replace("@@PKG_B64@@", pkg).replace("@@PAPER_B64@@", paper)
 
 
+def build_ext_text():
+    """The extension notebook (more partitions, pruned MobileNetV2): library only, no paper sources."""
+    pkg = tar_b64(ROOT, "pmp_dacis", keep=lambda r: r.endswith(".py"), arc_prefix="pmp_dacis")
+    tpl = open(os.path.join(ROOT, "tools", "notebook_template_ext.py"), encoding="utf-8").read()
+    return tpl.replace("@@PKG_B64@@", pkg)
+
+
 def main():
+    out_ext = os.path.join(ROOT, "notebooks", "pmp_dacis_cv4eo_ext.py")
+    os.makedirs(os.path.dirname(out_ext), exist_ok=True)
+    open(out_ext, "w", encoding="utf-8", newline="\n").write(build_ext_text())
+    print(f"wrote {out_ext}")
     nb = build_text(False)
     out = os.path.join(ROOT, "notebooks", "pmp_dacis_cv4eo.py")
     os.makedirs(os.path.dirname(out), exist_ok=True)

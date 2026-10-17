@@ -32,13 +32,15 @@ def download(root, names=("plantvillage", "plantdoc", "eurosat_msi", "resisc45")
         snapshot_download(repo_id=HF_SOURCES[n], repo_type="dataset", local_dir=d, max_workers=8)
 
 
-def ensure_data(root, cache_dir, cfg, keep_parquet=False):
+def ensure_data(root, cache_dir, cfg, keep_parquet=False, only=None):
     """Make sure the decoded arrays exist in cache_dir. Downloads a dataset only if its cache is missing and
     removes the raw parquet files afterwards (set keep_parquet=True to keep them)."""
     import shutil
     jobs = (("plantvillage", "plantvillage", load_plantvillage), ("plantdoc", "plantdoc", load_plantdoc),
             ("eurosat", "eurosat_msi", None), ("resisc45", "resisc45", None))
     for name, hf, loader in jobs:
+        if only is not None and name not in only:
+            continue
         tag = cache_tag(name, cfg)
         if all(os.path.exists(os.path.join(cache_dir, f"{tag}_{x}")) for x in ("X.npy", "y.npy", "names.json")):
             continue

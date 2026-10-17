@@ -46,13 +46,15 @@ class Results:
         self.tuning = json.load(open(tp)) if os.path.exists(tp) else None
         tp = os.path.join(root, "tuning_m_lr_resisc45.json")
         self.tuning_rs = json.load(open(tp)) if os.path.exists(tp) else None
+        tp = os.path.join(root, "tuning_m_lr_resisc45_low.json")
+        self.tuning_low = json.load(open(tp)) if os.path.exists(tp) else None
 
     # ---- access ---------------------------------------------------------------------------
     def seeds(self, variant):
         return sorted({k[1] for k in self.runs if k[0] == variant})
 
     def has(self, variant, id_):
-        ss = self.seeds(variant)
+        ss = [s for s in self.seeds(variant) if s < 5]            # partitions 5-9 exist only for some runs
         return bool(ss) and all((variant, s, id_) in self.runs for s in ss)
 
     def seeds_with(self, variant, *ids):
@@ -170,11 +172,15 @@ def table_scores(R):
     for lab, id_ in (("Dense ResNet-18, S0 only", "dense_ce"), ("Dense ResNet-18, S0+R+M+R", "dense_rmr")):
         L.append(lab + " & " + " & ".join(r"\multicolumn{2}{c}{%s}" % pm(R.ms(v, id_, k)) for v, k, _ in COLS) + r" \\")
     L.append(r"\midrule")
+    def mark(v, k, a, b):
+        p = R.paired(v, a, b, k) if c != "random" else None
+        return "" if p is None else (r"$^{\uparrow}$" if p["lo"] > 0 else (r"$^{\downarrow}$" if p["hi"] < 0 else ""))
+
     for c in SCORES:
         cells = []
         for v, k, _ in COLS:
-            cells.append(pm(R.ms(v, R.pid(v, c), k)))
-            cells.append(pm(R.ms(v, f"A_{c}_PMP_30", k)))
+            cells.append(pm(R.ms(v, R.pid(v, c), k)) + mark(v, k, R.pid(v, c), R.pid(v, "random")))
+            cells.append(pm(R.ms(v, f"A_{c}_PMP_30", k)) + mark(v, k, f"A_{c}_PMP_30", "A_random_PMP_30"))
         L.append(CRIT_LABEL[c] + " & " + " & ".join(cells) + r" \\")
     L += [r"\bottomrule", r"\end{tabular}"]
     return "\n".join(L)
@@ -351,6 +357,24 @@ def table_shots(R):
     return "\n".join(L)
 
 
+def table_mbv2(R):
+    """MobileNetV2 pruned with the same scores (schedule P): 5-shot accuracy by budget."""
+    fr = (60, 40, 25)
+    sets = [(RS, "RESISC45"), (ES13, "EuroSAT-MS")]
+    L = [r"\begin{tabular}{@{}l" + "r" * (len(fr) * len(sets)) + r"@{}}", r"\toprule",
+         " & " + " & ".join(r"\multicolumn{%d}{c}{%s}" % (len(fr), h) for _, h in sets) + r" \\",
+         "".join(r"\cmidrule(lr){%d-%d}" % (2 + len(fr) * i, 1 + len(fr) * (i + 1)) for i in range(len(sets))),
+         "Parameters kept & " + " & ".join(f"{f}\\%" for _ in sets for f in fr) + r" \\", r"\midrule"]
+    L.append("MobileNetV2, dense & " + " & ".join(r"\multicolumn{%d}{c}{%s}" % (len(fr), pm(R.ms(v, "MK_mobilenet_v2_dense", "novel_5")))
+                                              for v, _ in sets) + r" \\")
+    L.append(r"\midrule")
+    for c in ("random", "l1", "bn_gamma", "taylor", "dacis"):
+        cells = [pm(R.ms(v, f"MP_{c}_P_{f}", "novel_5")) for v, _ in sets for f in fr]
+        L.append(CRIT_LABEL[c] + " & " + " & ".join(cells) + r" \\")
+    L += [r"\bottomrule", r"\end{tabular}"]
+    return "\n".join(L)
+
+
 LAMBDAS = [(0.3, 0.2, 0.5), (1 / 3, 1 / 3, 1 / 3), (0.5, 0.2, 0.3), (0.2, 0.5, 0.3), (0.2, 0.2, 0.6), (0.1, 0.1, 0.8),
            (0.0, 0.0, 1.0), (0.5, 0.5, 0.0)]
 
@@ -380,6 +404,12 @@ def table_mlr(R):
         w = t2.get(k)
         extra = f"{w['1']:.1f} & {w['5']:.1f}" if w else "-- & --"
         L.append(f"{name} & {v['1']:.1f} & {v['5']:.1f} & {extra}" + r" \\")
+    if R.tuning_low:
+        L.append(r"\midrule")
+        for k, v in R.tuning_low["rows"].items():
+            if k.startswith("S0") or k in R.tuning["rows"]:
+                continue
+            L.append(f"{k} (extra check) & -- & -- & {v['1']:.1f} & {v['5']:.1f}" + r" \\")
     L += [r"\bottomrule", r"\end{tabular}"]
     return "\n".join(L)
 
@@ -477,7 +507,7 @@ def make_figures(R, outdir):
                 iid = f"A_{c}_PMP_30" if frac == 30 else f"C_{c}_PMP_{frac}"
                 if R.has(var, iid):
                     m, s = R.ms(var, iid, key)
-                    xs.append(frac); ys.append(m); es.append(s / np.sqrt(len(R.seeds(var))))
+                    xs.append(frac); ys.append(m); es.append(s / np.sqrt(len(R.vals(var, iid, key))))
             if xs:                                           # small horizontal offsets keep the four error bars apart
                 off = {"random": -1.0, "l1": -0.35, "taylor": 0.35, "dacis": 1.0}[c]
                 ax.errorbar([x + off for x in xs], ys, yerr=es, marker=mk[c], ms=3.5, lw=1.0, capsize=1.5, color=col[c], label=lab[c])
@@ -508,7 +538,12 @@ def make_figures(R, outdir):
         pr = [q for q in pr if q]
         if pr:
             ax.plot([q[0] for q in pr], [q[1] for q in pr], marker="o", ms=3.5, lw=1.0, color="#eb6834", label="ResNet-18 pruned (DACIS, 50/30/20/10%)")
-        for arch, lab, mk2, c in (("mobilenet_v3_small", "MobileNetV3-S", "s", "#2a78d6"), ("mobilenet_v2", "MobileNetV2", "^", "#1baf7a"),
+        pm2 = [pt(i) for i in ("MP_dacis_P_60", "MP_dacis_P_40", "MP_dacis_P_25")]
+        pm2 = [q for q in pm2 if q]
+        if pm2:
+            ax.plot([q[0] for q in pm2], [q[1] for q in pm2], marker="^", ms=3.5, lw=1.0, ls="--", color="#1baf7a",
+                    label="MobileNetV2 pruned (DACIS, 60/40/25%)")
+        for arch, lab, mk2, c in (("mobilenet_v3_small", "MobileNetV3-S", "s", "#2a78d6"), ("mobilenet_v2", "MobileNetV2", "v", "#8a8a8a"),
                                   ("efficientnet_b0", "EfficientNet-B0", "D", "#6250d6")):
             q = pt(f"K_{arch}")
             if q:
@@ -691,6 +726,29 @@ def numbers(R):
         ci = [r["acc"]["novel_5"]["ci95"] / 1.96 for (v, _, _), r in R.runs.items() if v == var and "novel_5" in r["acc"]]
         if ci:
             n[f"epse:{var}"] = f"{np.mean(ci):.1f}"
+    # pruned MobileNetV2: scores against random selection and against the dense network
+    mt = ma = mb = 0
+    mlist_a, mlist_b = [], []
+    for var, key, h in COLS[:2]:
+        t = f"{ctag(var, key)}:{key}"
+        for f in (60, 40, 25):
+            for c in ("l1", "bn_gamma", "taylor", "dacis"):
+                addp(f"{t}:mp-{c}-random:{f}", var, f"MP_{c}_P_{f}", f"MP_random_P_{f}", key)
+                pp = R.paired(var, f"MP_{c}_P_{f}", f"MP_random_P_{f}", key)
+                if pp:
+                    mt += 1
+                    if pp["lo"] > 0:
+                        ma += 1
+                        mlist_a.append(f"{CRIT_PLAIN[c]} at {f}\\% on {h}")
+                    elif pp["hi"] < 0:
+                        mb += 1
+                        mlist_b.append(f"{CRIT_PLAIN[c]} at {f}\\% on {h}")
+            addp(f"{t}:mp-dense-dacis:{f}", var, "MK_mobilenet_v2_dense", f"MP_dacis_P_{f}", key)
+            addp(f"{t}:mp-dacis-resnet:{f}", var, f"MP_dacis_P_{f}", "A_dacis_PMP_30", key)
+    if mt:
+        n["cmpm:total"], n["cmpm:above"], n["cmpm:below"] = str(mt), str(ma), str(mb)
+        n["cmpm:abovelist"] = "; ".join(mlist_a) if mlist_a else "none"
+        n["cmpm:belowlist"] = "; ".join(mlist_b) if mlist_b else "none"
     # all paired comparisons "computed score minus random selection" at 30%: how many favour either side
     for sched in ("PMP", "P"):
         tot = above = below = 0
@@ -767,6 +825,13 @@ def numbers(R):
             n[f"tune-rs:{k}:1"] = f"{v['1']:.1f}"
             n[f"tune-rs:{k}:5"] = f"{v['5']:.1f}"
     h = R.host.get("host", {})
+    if R.tuning_low:
+        rows = R.tuning_low["rows"]
+        s0 = rows.get("S0 (no episodic stage)", {}).get("5")
+        best = max((v["5"] for k, v in rows.items() if not k.startswith("S0")), default=None)
+        if s0 is not None and best is not None:
+            n["tune-low:s0"], n["tune-low:best"] = f"{s0:.1f}", f"{best:.1f}"
+            n["tune-low:lr"] = min(float(k) for k in rows if not k.startswith("S0")).__format__("g")
     n["hw-gpu"] = h.get("gpu", "an unnamed GPU").replace("_", " ")
     cpu = h.get("cpu", "")
     n["hw-cpu"] = cpu if cpu and cpu.lower() != "unknown" else f"a {h.get('cpu_count', '?')}-thread server CPU (model not reported by the host)"
@@ -950,7 +1015,7 @@ def build_all(out_root, gen_dir):
     for name, fn in (("tab_scores", table_scores), ("tab_pairs", table_pairs), ("tab_sched", table_sched),
                      ("tab_budget", table_budget), ("tab_budget_scores", table_budget_scores), ("tab_recovery", table_recovery),
                      ("tab_ablation", table_ablation), ("tab_eurosat", table_eurosat), ("tab_lambda", table_lambda),
-                     ("tab_mlr", table_mlr), ("tab_shots", table_shots)):
+                     ("tab_mlr", table_mlr), ("tab_shots", table_shots), ("tab_mbv2", table_mbv2)):
         try:
             _write(os.path.join(gen_dir, name + ".tex"), fn(R))
         except Exception as e:  # a missing run must not stop the other outputs
