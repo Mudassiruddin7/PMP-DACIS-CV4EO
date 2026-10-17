@@ -25,7 +25,9 @@ def repl_numbers(R):
     rep = os.path.join(ROOT, "results_replication")
     if not os.path.isdir(os.path.join(rep, "runs")):
         return {}
-    return RP.replication_numbers(R, RP.Results(rep))
+    n = RP.replication_numbers(R, RP.Results(rep))
+    n.update(RP.latency_numbers(os.path.join(rep, "latency_named_cpu.json")))
+    return n
 
 
 def main():

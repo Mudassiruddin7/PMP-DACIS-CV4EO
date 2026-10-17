@@ -1087,3 +1087,22 @@ def replication_numbers(R, R2):
         h2 = R2.host.get("host", {})
         n["repl:gpu"] = h2.get("gpu", "a second GPU").replace("_", " ")
     return n
+
+
+def latency_numbers(path):
+    """Numbers from tools/latency_named_cpu.py: single-thread latency on a CPU whose model is known (keys lat:*)."""
+    if not os.path.exists(path):
+        return {}
+    d = json.load(open(path))
+    rows = {r["key"]: r for r in d["rows"]}
+    n = {"lat:cpu": d["cpu"].replace("  ", " ").strip()}
+    for k, r in rows.items():
+        n[f"lat:{k}"] = f"{r['cpu1_ms']:.1f}"
+    dense = rows.get("dense")
+    if dense:
+        for k in ("r18_50", "r18_30", "r18_20", "r18_10", "mbv2_60", "mbv2_40", "mbv2_25"):
+            if k in rows:
+                n[f"lat:red:{k}"] = f"{(1 - rows[k]['cpu1_ms'] / dense['cpu1_ms']) * 100:.0f}"
+        if "mobilenet_v3_small" in rows:
+            n["lat:x:mnv3"] = f"{dense['cpu1_ms'] / rows['mobilenet_v3_small']['cpu1_ms']:.1f}"
+    return n

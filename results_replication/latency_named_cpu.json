@@ -1,0 +1,71 @@
+{
+ "cpu": "AMD Ryzen 7 7435HS",
+ "torch": "2.11.0+cu128",
+ "platform": "Windows-11-10.0.26300-SP0",
+ "rows": [
+  {
+   "name": "ResNet-18, dense",
+   "key": "dense",
+   "params_m": 11.176512,
+   "macs_g": 0.592183296,
+   "cpu1_ms": 40.953899995656684,
+   "cpu1_spread": 1.1547000030986965
+  },
+  {
+   "name": "ResNet-18, 50%",
+   "key": "r18_50",
+   "params_m": 5.593332,
+   "macs_g": 0.39776256,
+   "cpu1_ms": 32.010700000682846,
+   "cpu1_spread": 0.04140000237384811
+  },
+  {
+   "name": "ResNet-18, 30%",
+   "key": "r18_30",
+   "params_m": 3.354702,
+   "macs_g": 0.251338752,
+   "cpu1_ms": 25.001299996802118,
+   "cpu1_spread": 0.26279999292455614
+  },
+  {
+   "name": "ResNet-18, 20%",
+   "key": "r18_20",
+   "params_m": 2.237978,
+   "macs_g": 0.177795072,
+   "cpu1_ms": 26.56330000172602,
+   "cpu1_spread": 5.67274999775691
+  },
+  {
+   "name": "ResNet-18, 10%",
+   "key": "r18_10",
+   "params_m": 1.112616,
+   "macs_g": 0.10524672,
+   "cpu1_ms": 18.467100002453662,
+   "cpu1_spread": 0.12364998838165775
+  },
+  {
+   "name": "MobileNetV3-Small",
+   "key": "mobilenet_v3_small",
+   "params_m": 0.927008,
+   "macs_g": 0.018234368,
+   "cpu1_ms": 8.751850000408012,
+   "cpu1_spread": 0.05805000546388328
+  },
+  {
+   "name": "MobileNetV2",
+   "key": "mobilenet_v2",
+   "params_m": 2.223872,
+   "macs_g": 0.097794048,
+   "cpu1_ms": 16.123500005051028,
+   "cpu1_spread": 0.12645000242628157
+  },
+  {
+   "name": "EfficientNet-B0",
+   "key": "efficientnet_b0",
+   "params_m": 4.007548,
+   "macs_g": 0.125984768,
+   "cpu1_ms": 25.32535000500502,
+   "cpu1_spread": 0.392699999792967
+  }
+ ]
+}
