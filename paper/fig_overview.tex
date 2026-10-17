@@ -14,7 +14,7 @@
   \node[anchor=west, font=\footnotesize\bfseries] at (-0.7,1.25) {(a) An image becomes a label};
   \node[inner sep=0pt, draw, line width=0.4pt] at (-0.58,0) {\includegraphics[width=1.05cm,height=1.05cm]{img_aerial.jpg}};
   \node[inner sep=0pt, draw, line width=0.4pt] at (0.58,0) {\includegraphics[width=1.05cm,height=1.05cm]{img_leaf.jpg}};
-  \node[align=center, font=\scriptsize] at (0,-1.15) {input images: aerial\\scene, leaf photo\\(13-band patches too)};
+  \node[align=center, font=\scriptsize] at (0,-1.15) {input images: aerial\\field, leaf photo\\(13-band patches too)};
   \foreach \cx/\pat in {2.3/{0/1,1/1,2/1,3/0,4/1,5/1}, 3.6/{0/1,1/0,2/1,3/1,4/0,5/1}, 4.9/{0/0,1/1,2/0,3/1,4/0,5/1}, 6.2/{0/0,1/0,2/1,3/0,4/0,5/1}} {
     \draw[rounded corners=1.5pt, fill=white, line width=0.5pt] (\cx-0.5,-0.62) rectangle (\cx+0.5,0.62);
     \foreach \j/\k in \pat {

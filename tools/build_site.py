@@ -12,7 +12,7 @@ import sys
 import fitz
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TITLE = "Which Channels to Keep? Pruning for Few-Shot Earth Observation"
+TITLE = "Channel Importance Scores for Few-Shot Earth Observation: A Benchmark on Unseen Classes"
 
 
 def numbers():
