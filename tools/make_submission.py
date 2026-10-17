@@ -67,7 +67,7 @@ def main(out):
         z.writestr(zipfile.ZipInfo("pmp_dacis_code/notebooks/pmp_dacis_cv4eo_ext.py", (2025, 1, 1, 0, 0, 0)),
                    build_notebook.build_ext_text())
         readme = "\n".join([
-            "Code for the submission 'Do Channel Scores Matter?'.",
+            "Code for the submission 'Benchmarking Channel Pruning for Few-Shot Earth Observation'.",
             "",
             "notebooks/pmp_dacis_cv4eo.py   single-file marimo notebook: press Run all on a GPU machine (about two hours on an",
             "                               RTX 6000-class GPU); it downloads four public datasets from the Hugging Face Hub,",
@@ -117,7 +117,7 @@ def main(out):
    submission; the number is optional for review and can stay as it is. The header also carries the label `Applications Track`;
    the WACV style file requires one of its track options in review mode (paper/paper_review.tex), so it stays unless the
    workshop asks for something else.
-5. Do not upload `paper_authors.pdf` to OpenReview: it names the authors. The raw molab result zips stay outside this folder.
+5. Do not upload `paper_authors.pdf` to OpenReview: it names the authors. The raw result zips stay outside this folder.
 7. The first arXiv version of the method (2601.02353) still carries numbers that this study could not reproduce. The review PDF
    cites it anonymously as an earlier preprint. Consider posting a corrected version.
 8. Camera-ready is due Nov 20, 2026 (WACV format, authors visible): rebuild with `paper/paper_final.tex`.

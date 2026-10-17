@@ -582,6 +582,42 @@ def make_figures(R, outdir):
     fig.tight_layout(pad=0.4, rect=(0, 0, 1, 0.84))
     fig.savefig(os.path.join(outdir, "fig_tradeoff.pdf"))
     plt.close(fig)
+    # (2b) the headline figure: gain over random choice with 95% intervals over partitions
+    fr_cols = [("ResNet-18, 30% (PMP)", lambda c: (f"A_{c}_PMP_30", "A_random_PMP_30")),
+               ("MobileNetV2, 40% (P)", lambda c: (f"MP_{c}_P_40", "MP_random_P_40")),
+               ("MobileNetV2, 25% (P)", lambda c: (f"MP_{c}_P_25", "MP_random_P_25"))]
+    fr_rows = [(RS, "RESISC45"), (ES13, "EuroSAT-MS")]
+    f_names = [("l1", "Filter L1"), ("bn_gamma", "BN scale"), ("taylor", "Taylor"), ("dacis", "DACIS")]
+    f_col = {"l1": "#8a8a8a", "bn_gamma": "#8a8a8a", "taylor": "#128a5a", "dacis": "#eb6834"}
+    if any(R.seeds(v) for v, _ in fr_rows):
+        fig, axs = plt.subplots(2, 3, figsize=(7.0, 2.9), sharex="row")
+        for ri, (var, vn) in enumerate(fr_rows):
+            for ci, (title, ids) in enumerate(fr_cols):
+                ax = axs[ri][ci]
+                ax.axvline(0, color="#444", lw=0.8)
+                for yi, (c, lab) in enumerate(f_names):
+                    pp = R.paired(var, *ids(c), "novel_5")
+                    if not pp:
+                        continue
+                    ax.plot([pp["lo"], pp["hi"]], [yi, yi], color=f_col[c], lw=1.8, solid_capstyle="butt")
+                    ax.plot(pp["mean"], yi, "o", color=f_col[c], ms=4)
+                    ax.annotate("0.0" if round(pp["mean"], 1) == 0 else f"{pp['mean']:+.1f}", (pp["mean"], yi), xytext=(0, 4.5), textcoords="offset points",
+                                ha="center", fontsize=6, color=f_col[c], fontweight="bold" if c == "taylor" else "normal")
+                ax.set_ylim(len(f_names) - 0.4, -0.7)
+                ax.set_yticks(range(len(f_names)))
+                ax.set_yticklabels([n for _, n in f_names] if ci == 0 else [])
+                for tl, (c, _) in zip(ax.get_yticklabels(), f_names):
+                    tl.set_color(f_col[c] if c in ("taylor", "dacis") else "#333")
+                ax.grid(axis="x", alpha=0.25, lw=0.4)
+                if ri == 0:
+                    ax.set_title(title)
+                if ci == 0:
+                    ax.set_ylabel(vn, fontweight="bold")
+                if ri == 1:
+                    ax.set_xlabel("gain over random choice (points)")
+        fig.tight_layout(pad=0.4)
+        fig.savefig(os.path.join(outdir, "fig_forest.pdf"))
+        plt.close(fig)
     # (3) resolution sweep (trained at one resolution, tested at others)
     rv = next((v for v in (RS, PV) if R.has(v, "A_dacis_PMP_30") and
                any("res_sweep_5shot" in R.runs[(v, s, "A_dacis_PMP_30")]["acc"] for s in R.seeds(v))), None)

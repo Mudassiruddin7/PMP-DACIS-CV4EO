@@ -26,29 +26,11 @@ with weights $(\lambda_G,\lambda_V,\lambda_D)=(0.3,0.2,0.5)$ that we fixed befor
 \begin{figure*}[t]
   \centering
   \input{fig_overview}
-  \caption{The PMP schedule (DACIS is defined in Eq.~\ref{eq:dacis}). Blue boxes are training stages (S0 and R use cross-entropy on the base classes, M is episodic), red boxes are pruning steps. P1 prunes to $60\%$ of the parameters, M accumulates the mean filter-gradient norm $G_{\mathrm{meta}}$ of the episode loss, and P2 prunes to the target budget with a score that also uses $G_{\mathrm{meta}}$.}
+  \caption{A scene becomes a label through a pruned trunk and a nearest-prototype head (a); the PMP schedule (b).}
   \label{fig:overview}
 \end{figure*}
 
 \paragraph{The PMP schedule.}
 After S0, P1 prunes to $60\%$ of the parameters, R recovers, and M runs $1000$ episodes ($5$-way, $5$-shot, $15$ queries) of prototypical training with frozen BatchNorm statistics, in the manner of Meta-Baseline~\cite{chen2021metabaseline}. While M runs we accumulate, for every mid channel, the mean norm of the episode-loss gradient with respect to its filter, $G_{\mathrm{meta}}$. P2 prunes to the target budget with
-$\mathrm{DACIS}_c\,\bigl(1+\gamma\,\mathrm{rk}(G_{\mathrm{meta},c})\bigr)$, $\gamma{=}1$, recomputed on the meta-trained network (only DACIS uses $G_{\mathrm{meta}}$), and a last R repairs the damage. Table~\ref{tab:schedules} lists the seven schedules we compare. Two of them are controls. P$\to$M with twice the episodes tests whether extra stages help only because they train longer. P$\to$G$\to$P replaces M by $200$ episodes at learning rate zero, so the network is untouched and only the gradient statistic is collected; it asks whether the information in the meta stage is useful without its weight updates. The learning rate of M was chosen on validation classes (Sec.~\ref{sec:setup}).
+$\mathrm{DACIS}_c\,\bigl(1+\gamma\,\mathrm{rk}(G_{\mathrm{meta},c})\bigr)$, $\gamma{=}1$, recomputed on the meta-trained network (only DACIS uses $G_{\mathrm{meta}}$), and a last R repairs the damage. We compare seven schedules: P, P$\to$M, M$\to$P, P$\to$G$\to$P, PMP, PMPM and P$\to$M with twice the episodes (the supplement lists their steps). Two of them are controls. P$\to$M with twice the episodes tests whether extra stages help only because they train longer. P$\to$G$\to$P replaces M by $200$ episodes at learning rate zero, so the network is untouched and only the gradient statistic is collected; it asks whether the information in the meta stage is useful without its weight updates. The learning rate of M was chosen on validation classes (Sec.~\ref{sec:setup}).
 
-\begin{table}[t]
-  \centering\footnotesize\setlength{\tabcolsep}{4pt}
-  \begin{tabular}{@{}ll@{}}
-    \toprule
-    Schedule & Steps after S0 \\
-    \midrule
-    P & P(30\%), R \\
-    P$\to$M & P(30\%), R, M \\
-    M$\to$P & M, P(30\%), R \\
-    P$\to$G$\to$P & P(60\%), R, G, P(30\%), R \\
-    PMP & P(60\%), R, M, P(30\%), R \\
-    PMPM & PMP, then M \\
-    P$\to$M, $2\times$ & P(30\%), R, M with twice the episodes \\
-    \bottomrule
-  \end{tabular}
-  \caption{The seven schedules. P(x) prunes to the share x of the parameters; G collects the gradient statistic without updating a weight.}
-  \label{tab:schedules}
-\end{table}

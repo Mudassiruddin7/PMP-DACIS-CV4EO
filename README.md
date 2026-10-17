@@ -9,11 +9,11 @@ ground-level control. One-click notebooks rerun every experiment and rebuild the
 The method name PMP-DACIS comes from an earlier preprint. The numbers of that preprint do not reproduce under this
 protocol (see *About earlier numbers*).
 
-[![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/Mudassiruddin7/PMP-DACIS-CV4EO/blob/main/notebooks/pmp_dacis_cv4eo.py)
+Run the notebook with [marimo](https://marimo.io): `marimo edit notebooks/pmp_dacis_cv4eo.py`
 
 ## Reproduce in one click
 
-1. Open `notebooks/pmp_dacis_cv4eo.py` in [molab](https://molab.marimo.io) (button above) on a GPU machine.
+1. Open `notebooks/pmp_dacis_cv4eo.py` with marimo (`marimo edit`) on a GPU machine.
 2. Press **Run all**. Nothing has to be selected or typed.
 3. When the last cell finishes, press **Results**. You get `results.zip` with every run (JSON and per-episode arrays),
    all tables and figures, the logs, and the compiled PDFs (`paper_review.pdf`, anonymous, `paper_final.pdf`, with
