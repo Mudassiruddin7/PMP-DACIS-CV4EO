@@ -101,6 +101,7 @@ def main(out):
         f.write(f"**Title:** {title}\n\n**Track / type:** full paper (8 pages plus references), archival, double-blind\n\n")
         f.write(f"**Abstract:** {abstract_text(os.path.join(paper, 'sec_abstract.tex'), os.path.join(paper, 'generated', 'numbers.tex'))}\n\n")
         f.write("**Keywords:** channel pruning; few-shot learning; Earth observation; Sentinel-2 multispectral imagery; aerial scene classification; on-board inference\n\n")
+        f.write("**TL;DR:** On classes held out from RESISC45 and EuroSAT-MS, only the Taylor score beats random channel choice, and an unpruned MobileNetV3-Small beats every pruned network.\n\n")
         f.write("**Authors (enter in this order; every author needs an up-to-date OpenReview profile):**\n\n")
         for i, (n, e, a) in enumerate(AUTHORS, 1):
             f.write(f"{i}. {n} <{e}>, {a}\n")
