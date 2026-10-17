@@ -47,6 +47,7 @@ def abstract_text(tex_path, numbers_tex=None):
     t = re.sub(r"\s+", " ", m.group(1)).strip() if m else ""
     nums = numbers_map(numbers_tex) if numbers_tex else {}
     t = re.sub(r"\\num\{([^}]*)\}", lambda k: nums.get(k.group(1), "??"), t)
+    t = re.sub(r"\\key\{([^{}]*)\}", r"\1", t)                # bold numbers: keep the text
     t = t.replace("\\ensuremath{-}", "-").replace("\\ell_1", "L1").replace("\\%", "%").replace("~", " ")
     t = re.sub(r"\$([^$]*)\$", r"\1", t)                      # inline math: keep the content
     return re.sub(r"\s+", " ", t).strip()
