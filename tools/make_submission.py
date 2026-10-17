@@ -95,7 +95,7 @@ def main(out):
             for f in files:
                 full = os.path.join(base, f)
                 z.write(full, "pmp_dacis_code/results_tables/" + f)
-    title = re.search(r"\\title\{(.*?)\}", open(os.path.join(paper, "paper_title.tex"), encoding="utf-8").read(), re.S).group(1)
+    title = re.search(r"\\title\{(.*?)\}", open(os.path.join(paper, "paper_title.tex"), encoding="utf-8").read(), re.S).group(1).replace("\\\\", " ")
     with open(os.path.join(out, "openreview_fields.md"), "w", encoding="utf-8") as f:
         f.write("# OpenReview submission form (4th CV4EO workshop at WACV 2027)\n\n")
         f.write(f"**Title:** {title}\n\n**Track / type:** full paper (8 pages plus references), archival, double-blind\n\n")

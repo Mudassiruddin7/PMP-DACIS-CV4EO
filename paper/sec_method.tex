@@ -1,19 +1,19 @@
 \section{Method}
 \label{sec:method}
 
-\paragraph{Notation.}
+\paragraph{Notation:}
 S0 is cross-entropy pre-training of the ImageNet-initialised network on the base classes. R is the recovery training, with the same loss, that follows a pruning step. M is episodic (prototypical) meta-training. G is the same episodes with the learning rate set to zero, a probe that only collects gradient statistics. P is a pruning step. A \emph{mid channel} is an output channel of the first convolution of a residual block, the inner channel we remove. All methods of one class partition start from the same S0 network.
 
-\paragraph{Episodes and classifier.}
+\paragraph{Episodes and classifier:}
 An episode draws $N{=}5$ classes with $K$ labelled support images and $Q{=}15$ query images each. We embed an image with the global-average-pooled output of the backbone (512-d for ResNet-18), L2-normalise it, average the support embeddings of each class into a prototype, and give each query the label of the most similar prototype under cosine similarity, as in prototypical networks~\cite{snell2017proto} with a cosine head~\cite{chen2021metabaseline}. Base classes are the only classes the network sees, whether for training, for pruning decisions or for the calibration statistics below. Novel classes appear at evaluation and nowhere else.
 
-\paragraph{What is pruned.}
+\paragraph{What is pruned:}
 A ResNet-18 has eight basic blocks with two $3{\times}3$ convolutions each. We remove output channels of the first convolution, with their BatchNorm entries and the matching input slices of the second ($1920$ mid channels in total). The stem, the shortcuts and the block outputs keep their width, so no index has to be matched across a residual addition; He et al.~\cite{he2017channel} prune residual branches the same way. The budget is the share of the $11.18$\,M trunk parameters that remain, counted on the pruned network (the classifier is a parameter-free prototype head). To spread a budget over depth every score uses one rule: block $b\in\{0,\dots,7\}$ keeps a fraction $\kappa\,(1-\tau\,b/7)$ of its mid channels, with $\tau{=}0.5$ and $\kappa$ found by bisection. Deep blocks hold most of the weights, so they lose most of the channels.
 
-\paragraph{Pruning MobileNetV2.}
+\paragraph{Pruning MobileNetV2:}
 To see whether the answer depends on the architecture we apply the same procedure to the torchvision MobileNetV2. Here the prunable unit is a hidden channel of an inverted-residual block (the expansion convolution, its BatchNorm, the matching depthwise filter and BatchNorm, and the input slice of the projection are cut together; $16$ blocks with $7104$ hidden channels). The mid activation is the output of the depthwise stage; the filter-based scores use the expansion filter, and the BatchNorm scale is that of the depthwise BatchNorm. The depth rule and the bisection are the same, the budgets are $60$, $40$ and $25\%$ of the $2.22$\,M parameters, and only schedule P is used, because the meta stage did not help on the ResNet.
 
-\paragraph{Scores.}
+\paragraph{Scores:}
 All scores are computed on a calibration set of $40$ images per base class, without augmentation. Four are standard: random; the $\ell_1$ norm of the filter~\cite{li2017pruning}; the BatchNorm scale $|\gamma|$ of the pretrained network, which network slimming~\cite{liu2017slimming} ranks channels by, here without its sparsity penalty; and a first-order Taylor term~\cite{molchanov2017pruning}, the mean over images of $\lvert\sum_{x,y} a\,\partial L/\partial a\rvert$ for the post-ReLU mid activation $a$. The loss $L$ is the cross-entropy of a cosine nearest-prototype classifier whose prototypes are the calibration class means under the current network (temperature $10$), so no trained head has to survive the earlier stages.
 
 DACIS combines three per-channel quantities. $\Gs_c$ is the mean $\ell_2$ norm of $\partial L/\partial W_c$ over calibration batches of $64$ images, where $W_c$ is the filter of channel $c$. $\Vs_c$ is the variance, across calibration images, of the spatially pooled activation of the channel. $\Ds_c$ is the Fisher ratio of that pooled activation over the class labels, $\Ds_c=\sum_k n_k(\mu_{kc}-\mu_c)^2\big/\sum_k\sum_{i\in k}(a_{ic}-\mu_{kc})^2$, the between-class over within-class scatter of linear discriminant analysis~\cite{fisher1936}. Each quantity is replaced by its rank inside the block, scaled to $[0,1]$ (written $\mathrm{rk}$), and the score is
@@ -30,7 +30,7 @@ with weights $(\lambda_G,\lambda_V,\lambda_D)=(0.3,0.2,0.5)$ that we fixed befor
   \label{fig:overview}
 \end{figure*}
 
-\paragraph{The PMP schedule.}
+\paragraph{The PMP schedule:}
 After S0, P1 prunes to $60\%$ of the parameters, R recovers, and M runs $1000$ episodes ($5$-way, $5$-shot, $15$ queries) of prototypical training with frozen BatchNorm statistics, in the manner of Meta-Baseline~\cite{chen2021metabaseline}. While M runs we accumulate, for every mid channel, the mean norm of the episode-loss gradient with respect to its filter, $G_{\mathrm{meta}}$. P2 prunes to the target budget with
 $\mathrm{DACIS}_c\,\bigl(1+\gamma\,\mathrm{rk}(G_{\mathrm{meta},c})\bigr)$, $\gamma{=}1$, recomputed on the meta-trained network (only DACIS uses $G_{\mathrm{meta}}$), and a last R repairs the damage. We compare seven schedules: P, P$\to$M, M$\to$P, P$\to$G$\to$P, PMP, PMPM and P$\to$M with twice the episodes (the supplement lists their steps). Two of them are controls. P$\to$M with twice the episodes tests whether extra stages help only because they train longer. P$\to$G$\to$P replaces M by $200$ episodes at learning rate zero, so the network is untouched and only the gradient statistic is collected; it asks whether the information in the meta stage is useful without its weight updates. The learning rate of M was chosen on validation classes (Sec.~\ref{sec:setup}).
 
