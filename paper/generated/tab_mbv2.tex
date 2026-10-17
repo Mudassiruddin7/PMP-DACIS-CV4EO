@@ -1,0 +1,15 @@
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+ & \multicolumn{3}{c}{RESISC45} & \multicolumn{3}{c}{EuroSAT-MS} \\
+\cmidrule(lr){2-4}\cmidrule(lr){5-7}
+Parameters kept & 60\% & 40\% & 25\% & 60\% & 40\% & 25\% \\
+\midrule
+MobileNetV2, dense & \multicolumn{3}{c}{$87.4_{\pm2.5}$} & \multicolumn{3}{c}{$67.4_{\pm7.6}$} \\
+\midrule
+Random & $85.1_{\pm2.8}$ & $78.8_{\pm3.9}$ & $67.0_{\pm4.5}$ & $67.3_{\pm6.5}$ & $62.1_{\pm7.5}$ & $55.3_{\pm8.3}$ \\
+Filter $\ell_1$ & $84.6_{\pm2.7}$ & $78.4_{\pm3.4}$ & $66.8_{\pm4.6}$ & $66.3_{\pm7.9}$ & $62.1_{\pm8.2}$ & $52.3_{\pm9.8}$ \\
+BN scale $|\gamma|$ & $85.5_{\pm2.7}$ & $77.3_{\pm3.7}$ & $58.7_{\pm5.5}$ & $63.7_{\pm8.4}$ & $57.4_{\pm9.5}$ & $51.7_{\pm10.6}$ \\
+Taylor & $85.9_{\pm2.5}$ & $83.0_{\pm2.8}$ & $73.4_{\pm4.2}$ & $66.2_{\pm7.6}$ & $63.9_{\pm7.1}$ & $58.6_{\pm7.6}$ \\
+DACIS & $84.0_{\pm2.7}$ & $78.2_{\pm3.1}$ & $68.6_{\pm2.8}$ & $65.4_{\pm8.0}$ & $62.1_{\pm6.0}$ & $55.2_{\pm8.5}$ \\
+\bottomrule
+\end{tabular}

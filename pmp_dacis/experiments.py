@@ -202,13 +202,14 @@ class Ctx:
 
 
 # ---- tuning of the one shared knob that the first experiments showed to matter ----------------
-def tune_m_lr(cfg, device, datasets, out_root, fh=None, variant="plantvillage"):
+def tune_m_lr(cfg, device, datasets, out_root, fh=None, variant="plantvillage", tag=None):
     """Choose the learning rate of the episodic stage on the *validation classes* of the first seed.
 
     Only the dense network is used and no novel class is touched. The result is written to tuning_m_lr.json
     (PlantVillage, the value every variant uses) or tuning_m_lr_<variant>.json (a check on another dataset).
     """
-    path = os.path.join(out_root, "tuning_m_lr.json" if variant == "plantvillage" else f"tuning_m_lr_{variant}.json")
+    path = os.path.join(out_root, f"tuning_m_lr_{tag}.json" if tag else
+                        ("tuning_m_lr.json" if variant == "plantvillage" else f"tuning_m_lr_{variant}.json"))
     key = cfg_hash(cfg, [k for k in cfg if k not in ("seeds", "max_specs", "m_lr")], variant)
     if os.path.exists(path):
         rec = json.load(open(path))
@@ -477,6 +478,9 @@ def load_datasets(data_root, cache_dir, cfg, which=("plantvillage", "plantdoc", 
     return out
 
 
+FAILURES = []
+
+
 def run_all(cfg, device, data_root, cache_dir, out_root, variants=("resisc45", "eurosat13", "eurosat3", "plantvillage"),
             tiers=(1, 2, 3), fh=None, jobs=None):
     cfg = dict(cfg)
@@ -493,7 +497,7 @@ def run_all(cfg, device, data_root, cache_dir, out_root, variants=("resisc45", "
     log(f"episodic learning rate in use: {cfg['m_lr']:g}", fh)
     if jobs is None and "resisc45" in variants and len(cfg.get("m_lr_grid", [])) > 1:      # same sweep on aerial-scene validation classes, for the record
         tune_m_lr(cfg, device, datasets, out_root, fh, variant="resisc45")
-    failures = []
+    failures = FAILURES                                        # shared by all calls of one session
     if jobs is None:
         jobs = []
         for tier in tiers:

@@ -3,7 +3,7 @@
     python tools/latency_named_cpu.py [results_dir] [out.json]
 
 Only the architecture matters for latency, so the networks are rebuilt from the widths saved in the run files (random weights).
-Single thread, batch size 1, 128 x 128 RGB input, fp32, median over repeats of the median of 100 forward passes.
+Single thread, batch size 1, 128 x 128 RGB input, fp32, median over nine interleaved rounds of the median of 100 forward passes.
 """
 import glob
 import json
@@ -49,15 +49,29 @@ def main(res_dir, out_path):
             keep = [torch.tensor(k) for k in json.load(open(p))["stages"][0]["keep"]]
             items.append((f"MobileNetV2, {frac}%", f"mbv2_{frac}", prune_mbv2(base, keep)))
     torch.set_num_threads(1)
+    try:                                                       # pin to one core and raise the priority so that the scheduler disturbs less
+        import psutil
+        pr = psutil.Process()
+        pr.cpu_affinity([2])
+        pr.nice(psutil.HIGH_PRIORITY_CLASS if platform.system() == "Windows" else -10)
+    except Exception as e:
+        print("could not pin the process:", e)
+    # rounds interleave the networks, so clock-speed drift of a laptop hits all of them alike; a short busy loop warms the CPU first
+    import time
+    t_end = time.time() + 5
+    while time.time() < t_end:
+        sum(i * i for i in range(10000))
+    models = [(name, key, m.eval().float()) for name, key, m in items]
+    meds = {key: [] for _, key, _ in models}
+    for _ in range(9):
+        for name, key, m in models:
+            meds[key].append(latency_ms(m, 3, 128, torch.device("cpu"), batch=1, threads=1, warm=20, iters=100)["median"])
     rows = []
-    for name, key, m in items:
-        m = m.eval().float()
-        meds = []
-        for _ in range(5):
-            meds.append(latency_ms(m, 3, 128, torch.device("cpu"), batch=1, threads=1, warm=20, iters=100)["median"])
+    for name, key, m in models:
+        v = meds[key]
         rows.append({"name": name, "key": key, "params_m": count_params(m) / 1e6, "macs_g": count_macs(m, 128, 3) / 1e9,
-                     "cpu1_ms": statistics.median(meds), "cpu1_spread": max(meds) - min(meds)})
-        print(f"{name:24s} {rows[-1]['params_m']:6.2f} M {rows[-1]['macs_g']:6.3f} G {rows[-1]['cpu1_ms']:6.2f} ms (spread {rows[-1]['cpu1_spread']:.2f})", flush=True)
+                     "cpu1_ms": statistics.median(v), "cpu1_spread": max(v) - min(v)})
+        print(f"{name:24s} {rows[-1]['params_m']:6.2f} M {rows[-1]['macs_g']:6.3f} G {rows[-1]['cpu1_ms']:6.2f} ms (range {rows[-1]['cpu1_spread']:.2f})", flush=True)
     json.dump({"cpu": cpu_name(), "torch": torch.__version__, "platform": platform.platform(), "rows": rows}, open(out_path, "w"), indent=1)
 
 

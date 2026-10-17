@@ -28,7 +28,7 @@ AUTHORS = [
     ("Sadaf Kauser", "sadafkauser8143@gmail.com", "Birla Institute of Technology and Science Pilani, Dubai Campus"),
     ("Muzammil Shareef", "mshareef1@learn.athabascau.ca", "Athabasca University, Canada"),
     ("Abdul Raheem Ahmed", "Aahmed011@my.wilmu.edu", "Wilmington University, United States"),
-    ("Mohammed Aqib Abdullah", "aqib.abdullah13@gmail.com", "(affiliation not provided)"),
+    ("Mohammed Aqib Abdullah", "aqib.abdullah13@gmail.com", "Osmania University, Hyderabad, India"),
 ]
 
 
@@ -55,27 +55,34 @@ def abstract_text(tex_path, numbers_tex=None):
 def main(out):
     os.makedirs(out, exist_ok=True)
     paper = os.path.join(ROOT, "paper")
-    for src, dst in (("paper_review.pdf", "paper_review.pdf"), ("paper_final.pdf", "paper_authors.pdf"), ("paper_supp.pdf", "supplement.pdf")):
-        if os.path.exists(os.path.join(paper, src)):
-            shutil.copy(os.path.join(paper, src), os.path.join(out, dst))
+    for name in ("paper_review.pdf", "paper_authors.pdf", "supplement.pdf"):
+        if os.path.exists(os.path.join(paper, "final", name)):
+            shutil.copy(os.path.join(paper, "final", name), os.path.join(out, name))
     sys.path.insert(0, os.path.join(ROOT, "tools"))
     import build_notebook
     with zipfile.ZipFile(os.path.join(out, "supplementary_anonymous.zip"), "w", zipfile.ZIP_DEFLATED) as z:
         # the notebook of the zip is rebuilt without the files that name the authors
         z.writestr(zipfile.ZipInfo("pmp_dacis_code/notebooks/pmp_dacis_cv4eo.py", (2025, 1, 1, 0, 0, 0)),
                    build_notebook.build_text(anonymous=True))
+        z.writestr(zipfile.ZipInfo("pmp_dacis_code/notebooks/pmp_dacis_cv4eo_ext.py", (2025, 1, 1, 0, 0, 0)),
+                   build_notebook.build_ext_text())
         readme = "\n".join([
             "Code for the submission 'Do Channel Scores Matter?'.",
             "",
             "notebooks/pmp_dacis_cv4eo.py   single-file marimo notebook: press Run all on a GPU machine (about two hours on an",
             "                               RTX 6000-class GPU); it downloads four public datasets from the Hugging Face Hub,",
             "                               reruns every experiment, rebuilds every table and figure, and packs results.zip.",
-            "pmp_dacis/                     the library that the notebook embeds (readable copy)",
+            "notebooks/pmp_dacis_cv4eo_ext.py   extension run: class partitions 5 to 9 and a pruned MobileNetV2 (about 1.5 hours)",
+            "pmp_dacis/                     the library that the notebooks embed (readable copy)",
             "tests/test_core.py             unit tests (python tests/test_core.py)",
+            "supplement.pdf                 extra tables and figures that the paper cites",
             "results_tables/                the generated tables, figures and numbers of the reported run",
             ""])
         z.writestr(zipfile.ZipInfo("pmp_dacis_code/README.txt", (2025, 1, 1, 0, 0, 0)), readme)
-        for rel in ("requirements.txt", "tests/test_core.py", "tools/build_notebook.py", "tools/notebook_template.py"):
+        supp_pdf = os.path.join(paper, "final", "supplement.pdf")
+        if os.path.exists(supp_pdf):                                   # the extra tables travel inside the same upload
+            z.write(supp_pdf, "pmp_dacis_code/supplement.pdf")
+        for rel in ("requirements.txt", "tests/test_core.py", "tools/build_notebook.py", "tools/notebook_template.py", "tools/notebook_template_ext.py"):
             if os.path.exists(os.path.join(ROOT, rel)):
                 z.write(os.path.join(ROOT, rel), "pmp_dacis_code/" + rel)
         for base, dirs, files in os.walk(os.path.join(ROOT, "pmp_dacis")):
@@ -104,13 +111,13 @@ def main(out):
 1. Open https://openreview.net/group?id=thecvf.com/WACV/2027/Workshop/CV4EO and create a new submission (full paper).
 2. Fill title, abstract, keywords and the 12 authors from `openreview_fields.md`. Every author needs an up-to-date OpenReview
    profile; the form rejects e-mails that have none.
-3. Upload `paper_review.pdf` (anonymous, 8 pages + references). Upload `supplementary_anonymous.zip` as supplementary material.
+3. Upload `paper_review.pdf` (anonymous; main text ends on page 8, references follow). Upload `supplementary_anonymous.zip` as supplementary
+   material (code, both notebooks, generated tables and `supplement.pdf` with the extra tables).
 4. The PDF shows `Paper ID *****` and `Submission #*****` in its header. OpenReview assigns the number after you create the
    submission; the number is optional for review and can stay as it is. The header also carries the label `Applications Track`;
    the WACV style file requires one of its track options in review mode (paper/paper_review.tex), so it stays unless the
    workshop asks for something else.
-5. Do not upload `paper_authors.pdf` or `results_molab.zip` to OpenReview: they name the authors.
-6. Mohammed Aqib Abdullah's affiliation was not provided; it is missing in `paper_authors.pdf` and in the form line above.
+5. Do not upload `paper_authors.pdf` to OpenReview: it names the authors. The raw molab result zips stay outside this folder.
 7. The first arXiv version of the method (2601.02353) still carries numbers that this study could not reproduce. The review PDF
    cites it anonymously as an earlier preprint. Consider posting a corrected version.
 8. Camera-ready is due Nov 20, 2026 (WACV format, authors visible): rebuild with `paper/paper_final.tex`.

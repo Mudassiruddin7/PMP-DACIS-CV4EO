@@ -61,6 +61,17 @@ def main(paths):
                 if any(n in v for n in NAMES):
                     print("  METADATA LEAK:", k, v)
                     problems += 1
+            dests = []
+            try:                                              # hyperref writes cite keys into named destinations
+                dests = list(d.resolve_names().keys())
+            except Exception:
+                pass
+            for pg in d:
+                dests += [l.get("nameddest", "") for l in pg.get_links() if l.get("nameddest")]
+            for dn in dests:
+                if any(n.lower() in dn.lower() for n in NAMES):
+                    print("  NAMED-DESTINATION LEAK:", dn)
+                    problems += 1
             text = "\n".join(pg.get_text() for pg in d)
             for w, ctx in scan(text, p):
                 print(f"  LEAK in {p}: '{w}': ...{ctx}...")

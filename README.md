@@ -1,9 +1,13 @@
-# PMP-DACIS
+# Do channel scores matter? Pruning for few-shot Earth observation
 
-Does the choice of channels matter when a ResNet-18 is pruned for few-shot Earth observation? This repository compares
-eight channel scores and seven training schedules on aerial scenes (NWPU-RESISC45), 13-band Sentinel-2 patches
-(EuroSAT-MS) and crop photographs (PlantVillage, PlantDoc), and ships a one-click notebook that reruns every
-experiment and rebuilds the paper tables, figures and PDFs from the saved results.
+Does the choice of channels matter when a pretrained network is pruned for few-shot recognition of unseen classes? This
+repository compares eight channel scores (random, filter L1, BatchNorm scale, Taylor, three single statistics and DACIS)
+and seven training schedules on a ResNet-18, and five of the scores on a MobileNetV2, with held-out classes of aerial
+scenes (NWPU-RESISC45) and 13-band Sentinel-2 patches (EuroSAT-MS); PlantVillage and PlantDoc leaf photographs are a
+ground-level control. One-click notebooks rerun every experiment and rebuild the paper tables, figures and PDFs.
+
+The method name PMP-DACIS comes from an earlier preprint. The numbers of that preprint do not reproduce under this
+protocol (see *About earlier numbers*).
 
 [![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/Mudassiruddin7/PMP-DACIS-CV4EO/blob/main/notebooks/pmp_dacis_cv4eo.py)
 
@@ -42,43 +46,51 @@ dataset variants.
   with the same training recipe.
 * **Where to test.** 5-way 1/5/10-shot episodes on classes held out from training: 15 of 45 RESISC45 scene classes,
   5 of 10 EuroSAT land-cover classes with all 13 Sentinel-2 bands (and a three-band control), and 8 of 38 PlantVillage
-  classes; PlantDoc field photographs are a domain-shift test. Five random class partitions, and the same 2,000 test
-  episodes for every method inside a partition.
+  classes; PlantDoc field photographs are a domain-shift test. Five random class partitions (ten for the two
+  Earth-observation sets, see the extension notebook), and the same 2,000 test episodes for every method inside a partition.
+* **A compact network.** MobileNetV2 pruned with the same scores (random, L1, BatchNorm scale, Taylor, DACIS) to 60, 40 and
+  25 % of its parameters (`MP_*` runs).
 
 ## Results
 
 <!-- RESULTS:BEGIN -->
-Run on NVIDIA RTX PRO 6000 Blackwell Server Edition (unknown); 5 random class partitions; episodic learning rate 0.0001; mean ± standard deviation over partitions, 5-way 5-shot test episodes, identical for every row.
+Run on NVIDIA RTX PRO 6000 Blackwell Server Edition; 10 random class partitions for RESISC45 and EuroSAT-MS (5 for PlantVillage; rows for 50, 20 and 10 % of the parameters use 5); episodic learning rate 0.0001; mean ± standard deviation over partitions, 5-way 5-shot test episodes, identical for every row. Full tables: `paper/generated/summary.md`.
 
 | model | params kept | RESISC45 | EuroSAT-MS | PlantVillage | PlantDoc |
 |---|---|---|---|---|---|
-| ResNet-18 dense (S0) | 100% | 86.9 ± 3.4 | 62.1 ± 5.3 | 91.4 ± 5.6 | 55.4 ± 1.3 |
-| ResNet-18 dense (S0+R+M+R) | 100% | 86.7 ± 3.3 | 61.7 ± 5.1 | 91.3 ± 5.6 | 55.5 ± 1.1 |
-| MobileNetV3-Small | 8% | 88.1 ± 3.3 | 72.4 ± 4.9 | 91.1 ± 5.9 | 50.0 ± 0.8 |
-| MobileNetV2 | 20% | 86.9 ± 3.1 | 65.4 ± 3.5 | 91.2 ± 6.3 | 55.1 ± 1.0 |
-| EfficientNet-B0 | 36% | 90.5 ± 2.4 | 69.9 ± 5.1 | 93.8 ± 5.2 | 58.5 ± 0.4 |
-| 30%, random, prune+recover (P) | 30% | 79.7 ± 4.9 | 55.6 ± 6.4 | 85.6 ± 8.1 | 46.6 ± 1.3 |
-| 30%, l1, prune+recover (P) | 30% | 80.5 ± 4.5 | 56.2 ± 7.9 | 85.8 ± 8.3 | 48.7 ± 0.9 |
-| 30%, bn_gamma, prune+recover (P) | 30% | -- | -- | 85.1 ± 8.9 | 44.4 ± 1.7 |
-| 30%, taylor, prune+recover (P) | 30% | 82.2 ± 3.9 | 58.1 ± 6.6 | 88.3 ± 7.1 | 47.9 ± 1.2 |
-| 30%, G, prune+recover (P) | 30% | -- | -- | 87.3 ± 7.2 | 47.6 ± 1.5 |
-| 30%, V, prune+recover (P) | 30% | -- | -- | 86.5 ± 6.9 | 47.2 ± 1.4 |
-| 30%, D, prune+recover (P) | 30% | 79.3 ± 4.1 | 55.8 ± 6.9 | 85.2 ± 8.9 | 46.8 ± 0.8 |
-| 30%, dacis, prune+recover (P) | 30% | 79.7 ± 4.1 | 56.3 ± 6.7 | 86.4 ± 7.7 | 47.3 ± 1.4 |
-| 30%, random, PMP | 30% | 81.0 ± 4.2 | 57.6 ± 6.0 | 86.8 ± 7.7 | 46.7 ± 1.7 |
-| 30%, l1, PMP | 30% | 81.0 ± 4.2 | 57.0 ± 6.0 | 86.4 ± 7.7 | 48.1 ± 0.8 |
-| 30%, bn_gamma, PMP | 30% | 79.7 ± 4.2 | 55.0 ± 6.1 | 85.1 ± 8.7 | 45.5 ± 1.0 |
-| 30%, taylor, PMP | 30% | 82.2 ± 3.9 | 57.0 ± 8.0 | 87.1 ± 7.1 | 48.5 ± 1.0 |
-| 30%, G, PMP | 30% | 81.0 ± 4.5 | 56.4 ± 6.5 | 86.7 ± 7.9 | 46.9 ± 2.5 |
-| 30%, V, PMP | 30% | 81.0 ± 4.0 | 56.5 ± 5.2 | 86.5 ± 7.3 | 47.3 ± 1.3 |
-| 30%, D, PMP | 30% | 79.5 ± 3.9 | 56.0 ± 7.5 | 85.3 ± 8.0 | 46.4 ± 1.3 |
-| 30%, dacis, PMP | 30% | 80.5 ± 4.2 | 57.1 ± 4.9 | 86.6 ± 7.5 | 47.5 ± 1.6 |
-| 50%, l1, PMP | 50% | 84.1 ± 3.7 | 60.1 ± 4.4 | 89.0 ± 7.1 | 51.3 ± 1.1 |
-| 50%, dacis, PMP | 50% | 83.8 ± 3.7 | 58.6 ± 5.7 | 88.6 ± 7.2 | 51.6 ± 1.4 |
-| 20%, l1, PMP | 20% | 79.4 ± 4.4 | 54.6 ± 8.7 | 84.2 ± 8.3 | 45.3 ± 1.0 |
-| 20%, dacis, PMP | 20% | 77.4 ± 4.9 | 54.5 ± 8.1 | 83.8 ± 8.2 | 44.1 ± 2.0 |
-| 10%, l1, PMP | 10% | 70.8 ± 5.5 | 50.9 ± 10.4 | 79.3 ± 9.9 | 39.1 ± 1.1 |
-| 10%, dacis, PMP | 10% | 71.9 ± 4.8 | 51.4 ± 7.5 | 78.2 ± 10.2 | 40.5 ± 1.1 |
+| ResNet-18 dense | 100% | 87.2 ± 2.5 | 64.7 ± 4.9 | 91.4 ± 5.6 | 55.4 ± 1.3 |
+| MobileNetV3-Small dense | 8% | 88.1 ± 2.5 | 74.7 ± 6.0 | 91.1 ± 5.9 | 50.0 ± 0.8 |
+| MobileNetV2 dense | 20% | 87.4 ± 2.5 | 67.8 ± 6.4 | 91.2 ± 6.3 | 55.1 ± 1.0 |
+| EfficientNet-B0 dense | 36% | 90.7 ± 2.0 | 73.6 ± 6.9 | 93.8 ± 5.2 | 58.5 ± 0.4 |
+| ResNet-18, 30%, random, PMP | 30% | 81.1 ± 3.0 | 58.4 ± 4.6 | 86.8 ± 7.7 | 46.7 ± 1.7 |
+| ResNet-18, 30%, filter L1, PMP | 30% | 81.5 ± 3.0 | 59.4 ± 5.7 | 86.4 ± 7.7 | 48.1 ± 0.8 |
+| ResNet-18, 30%, BN scale, PMP | 30% | 80.0 ± 3.1 | 56.8 ± 4.9 | 85.1 ± 8.7 | 45.5 ± 1.0 |
+| ResNet-18, 30%, Taylor, PMP | 30% | 82.4 ± 3.0 | 59.7 ± 6.3 | 87.1 ± 7.1 | 48.5 ± 1.0 |
+| ResNet-18, 30%, gradient, PMP | 30% | 81.4 ± 3.3 | 58.9 ± 5.6 | 86.7 ± 7.9 | 46.9 ± 2.5 |
+| ResNet-18, 30%, variance, PMP | 30% | 81.5 ± 3.0 | 57.3 ± 4.4 | 86.5 ± 7.3 | 47.3 ± 1.3 |
+| ResNet-18, 30%, Fisher, PMP | 30% | 79.9 ± 2.9 | 58.4 ± 6.0 | 85.3 ± 8.0 | 46.4 ± 1.3 |
+| ResNet-18, 30%, DACIS, PMP | 30% | 81.0 ± 3.3 | 59.3 ± 4.9 | 86.6 ± 7.5 | 47.5 ± 1.6 |
+| ResNet-18, 50%, filter L1, PMP | 50% | 84.1 ± 3.7 | 60.1 ± 4.4 | 89.0 ± 7.1 | 51.3 ± 1.1 |
+| ResNet-18, 50%, DACIS, PMP | 50% | 83.8 ± 3.7 | 58.6 ± 5.7 | 88.6 ± 7.2 | 51.6 ± 1.4 |
+| ResNet-18, 20%, filter L1, PMP | 20% | 79.4 ± 4.4 | 54.6 ± 8.7 | 84.2 ± 8.3 | 45.3 ± 1.0 |
+| ResNet-18, 20%, DACIS, PMP | 20% | 77.4 ± 4.9 | 54.5 ± 8.1 | 83.8 ± 8.2 | 44.1 ± 2.0 |
+| ResNet-18, 10%, filter L1, PMP | 10% | 70.8 ± 5.5 | 50.9 ± 10.4 | 79.3 ± 9.9 | 39.1 ± 1.1 |
+| ResNet-18, 10%, DACIS, PMP | 10% | 71.9 ± 4.8 | 51.4 ± 7.5 | 78.2 ± 10.2 | 40.5 ± 1.1 |
+| MobileNetV2, 60%, random, P | 60% | 85.1 ± 2.8 | 67.3 ± 6.5 | -- | -- |
+| MobileNetV2, 60%, filter L1, P | 60% | 84.6 ± 2.7 | 66.3 ± 7.9 | -- | -- |
+| MobileNetV2, 60%, BN scale, P | 60% | 85.5 ± 2.7 | 63.7 ± 8.4 | -- | -- |
+| MobileNetV2, 60%, Taylor, P | 60% | 85.9 ± 2.5 | 66.2 ± 7.6 | -- | -- |
+| MobileNetV2, 60%, DACIS, P | 60% | 84.0 ± 2.7 | 65.4 ± 8.0 | -- | -- |
+| MobileNetV2, 40%, random, P | 40% | 78.8 ± 3.9 | 62.1 ± 7.5 | -- | -- |
+| MobileNetV2, 40%, filter L1, P | 40% | 78.4 ± 3.4 | 62.1 ± 8.2 | -- | -- |
+| MobileNetV2, 40%, BN scale, P | 40% | 77.3 ± 3.7 | 57.4 ± 9.5 | -- | -- |
+| MobileNetV2, 40%, Taylor, P | 40% | 83.0 ± 2.8 | 63.9 ± 7.1 | -- | -- |
+| MobileNetV2, 40%, DACIS, P | 40% | 78.2 ± 3.1 | 62.1 ± 6.0 | -- | -- |
+| MobileNetV2, 25%, random, P | 25% | 67.0 ± 4.5 | 55.3 ± 8.3 | -- | -- |
+| MobileNetV2, 25%, filter L1, P | 25% | 66.8 ± 4.6 | 52.3 ± 9.8 | -- | -- |
+| MobileNetV2, 25%, BN scale, P | 25% | 58.7 ± 5.5 | 51.7 ± 10.6 | -- | -- |
+| MobileNetV2, 25%, Taylor, P | 25% | 73.4 ± 4.2 | 58.6 ± 7.6 | -- | -- |
+| MobileNetV2, 25%, DACIS, P | 25% | 68.6 ± 2.8 | 55.2 ± 8.5 | -- | -- |
 <!-- RESULTS:END -->
 
 ## About earlier numbers
@@ -92,11 +104,12 @@ and should not be cited. The scripts were removed from the working tree; they re
 
 ```
 pmp_dacis/        library: data, ResNet-18 surgery, scores, training stages, evaluation, report, paper build
-notebooks/        pmp_dacis_cv4eo.py, the single-file marimo notebook
-paper/            LaTeX sources (WACV 2027 style) and the built PDFs
-results/          saved runs of the reported experiment, generated tables and figures
+notebooks/        pmp_dacis_cv4eo.py (main study) and pmp_dacis_cv4eo_ext.py (partitions 5-9, pruned MobileNetV2)
+paper/            LaTeX sources (WACV 2027 style), generated tables and figures, built PDFs in final/
+results/          saved runs of the reported experiments (JSON and per-episode arrays)
+results_replication/  the same runs on a laptop GPU, and latency on a named CPU
 tests/            unit tests for the parts where a silent bug would change the science
-tools/            notebook builder, result finaliser, anonymity checker
+tools/            notebook builder, result finaliser, number and anonymity checkers, CPU latency script
 ```
 
 ## License

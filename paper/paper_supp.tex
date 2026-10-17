@@ -22,10 +22,16 @@ partitions with the sample standard deviation as a subscript; brackets give a 95
 \input{generated/tab_pairs}
 \caption{Paired differences between choices, in points.}
 \end{table*}
+\begin{table*}[t]\centering\small\setlength{\tabcolsep}{4pt}
+\input{generated/tab_pairs_sched}
+\caption{Paired differences between schedules for DACIS at $30\%$ of the parameters, in points.}
+\end{table*}
 \begin{table*}[t]\centering\footnotesize\setlength{\tabcolsep}{3pt}
 \input{generated/tab_shots}
 \caption{1-, 5- and 10-shot accuracy (\%) of the main models on the three novel-class sets.}
 \end{table*}
+\begin{figure*}[t]\centering\includegraphics[width=\textwidth]{generated/fig_seeds.pdf}
+\caption{5-shot accuracy of each score at $30\%$ of the parameters (schedule PMP) on each class partition, relative to the mean over the eight scores; markers are partitions, offset horizontally for legibility. Rnd: random, L1: filter $\ell_1$, BN: BatchNorm scale, Tay: Taylor, G, V, D: gradient, variance, Fisher, DAC: DACIS.}\end{figure*}
 \begin{table}[t]\centering\footnotesize\setlength{\tabcolsep}{3pt}
 \input{generated/tab_sched}
 \caption{Schedules for DACIS at 30\% of the parameters, 5-shot accuracy.}

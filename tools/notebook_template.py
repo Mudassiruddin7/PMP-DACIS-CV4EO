@@ -41,9 +41,10 @@ def _(mo):
     1. Detects the GPU and picks the `paper` profile (a CPU-only machine gets a tiny `smoke` profile, which only checks that the code runs).
     2. Downloads NWPU-RESISC45 (aerial scenes), EuroSAT-MS (Sentinel-2, 13 bands), PlantVillage and PlantDoc from the Hugging Face Hub (about 5 GB).
     3. Trains and evaluates every model of the study: ResNet-18 pruned by eight channel scores under several schedules and budgets,
-       three off-the-shelf compact networks, 5-way 1/5/10-shot episodes on held-out classes, five class partitions (seeds).
-       On an RTX 6000-class GPU this takes about two hours. Finished runs are cached on disk, so *Run all* can be repeated
-       after an interruption and resumes where it stopped.
+       three off-the-shelf compact networks, 5-way 1/5/10-shot episodes on held-out classes, five class partitions (seeds);
+       then the second part: partitions 5 to 9 for the RESISC45 and EuroSAT-MS comparisons and MobileNetV2 pruned with the same
+       scores. On an RTX 6000-class GPU this takes about 3.5 hours (2.3 h and 1.3 h). Finished runs are cached on disk, so *Run all*
+       can be repeated after an interruption and resumes where it stopped.
     4. Builds all tables and figures from the saved per-episode results. No number in the paper is typed by hand.
     5. Compiles the anonymous review PDF, the author-version PDF and the supplement with Tectonic.
     6. Packs everything into `results.zip`.
@@ -113,8 +114,8 @@ def _(E, EV, WORK, json, os):
     (OUT / "host.json").write_text(json.dumps({"profile": PROFILE, "host": HOST, "cfg": {k: v for k, v in CFG.items()}}, indent=1, default=str))
     print("profile:", PROFILE)
     print("host   :", HOST)
-    if PROFILE != "paper":
-        print("\n*** No GPU found: running the tiny smoke profile. Its numbers are NOT paper numbers. ***")
+    if device.type != "cuda":
+        print("\n*** No GPU found: running a tiny profile. Its numbers are NOT paper numbers. ***")
     return CFG, HOST, OUT, PROFILE, device
 
 
@@ -143,7 +144,28 @@ def _(CACHE, CFG, DATA, E, OUT, PROFILE, device, time):
 
 
 @app.cell
-def _(OUT, PAPER, RP, RUNS_DONE):
+def _(CACHE, CFG, DATA, E, OUT, PROFILE, RUNS_DONE, device, os, time):
+    # Second part of the study: more class partitions for the Earth-observation comparisons, MobileNetV2 pruned with the same
+    # scores, and a check of smaller episodic learning rates. Without a GPU (smoke profile) it is skipped.
+    assert RUNS_DONE
+    EXT_DONE = False
+    if PROFILE in ("paper", "micro"):
+        _eo = ("resisc45", "eurosat13")
+        _jobs = E.ext_jobs(_eo) if PROFILE == "paper" else E.ext_jobs(_eo, new_seeds=(2,), all_seeds=(0, 1))
+        _fh = open(OUT / "log.txt", "a")
+        _t0 = time.time()
+        E.log(f"starting extension runs: {[(v, len(g), s) for v, g, s in _jobs]}", _fh)
+        _ds = E.run_all(CFG, device, str(DATA), str(CACHE), str(OUT), variants=_eo, fh=_fh, jobs=_jobs)
+        _low = dict(CFG, m_lr_grid=[1e-5, 2.5e-5, 5e-5, 1e-4] if PROFILE == "paper" else [1e-4, 2.5e-4])
+        E.tune_m_lr(_low, device, _ds, str(OUT), _fh, variant="resisc45", tag="resisc45_low")
+        E.log(f"extension runs finished in {(time.time() - _t0) / 60:.1f} min (this session)", _fh)
+        _fh.close()
+        EXT_DONE = True
+    return (EXT_DONE,)
+
+
+@app.cell
+def _(EXT_DONE, OUT, PAPER, RP, RUNS_DONE):
     assert RUNS_DONE
     GEN = PAPER / "generated"
     R = RP.build_all(str(OUT), str(GEN))

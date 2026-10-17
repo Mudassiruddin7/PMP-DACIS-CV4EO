@@ -43,7 +43,7 @@ def main():
     os.makedirs(res)
     z = zipfile.ZipFile(a.zip)
     for n in z.namelist():
-        if n.startswith(("runs/", "tuning_m_lr", "host.json", "log.txt", "config_used.json", "claims_check.txt", "paper_build_log.txt", "failures.json")):
+        if n.startswith(("runs/", "tuning_m_lr", "host.json", "log.txt", "config_used.json", "claims_check.txt", "failures.json")):
             z.extract(n, res)
     if a.ext:
         ze = zipfile.ZipFile(a.ext)
@@ -52,6 +52,8 @@ def main():
                 ze.extract(n, res)
             elif n == "tuning_m_lr_resisc45_low.json":
                 ze.extract(n, res)
+            elif n == "host.json":
+                open(os.path.join(res, "host_extension.json"), "wb").write(ze.read(n))
             elif n == "log.txt":
                 open(os.path.join(res, "log_extension.txt"), "wb").write(ze.read(n))
             elif n == "failures.json":
@@ -82,14 +84,15 @@ def main():
                    + [os.path.join(paper, n + ".pdf") for n in ("paper_review", "paper_final", "paper_supp")])
     final = os.path.join(paper, "final")
     os.makedirs(final, exist_ok=True)
-    for name in ("paper_review", "paper_final", "paper_supp"):
-        shutil.copy(os.path.join(paper, name + ".pdf"), os.path.join(final, name + ".pdf"))
+    for src, dst in (("paper_review", "paper_review"), ("paper_final", "paper_authors"), ("paper_supp", "supplement")):
+        shutil.copy(os.path.join(paper, src + ".pdf"), os.path.join(final, dst + ".pdf"))
+    for name in ("paper_review", "paper_final", "paper_supp"):          # build products; the copies in paper/final are the kept ones
+        os.remove(os.path.join(paper, name + ".pdf"))
     subprocess.run([sys.executable, os.path.join(ROOT, "tools", "build_notebook.py")], check=True)
     subprocess.run([sys.executable, os.path.join(ROOT, "tools", "make_submission.py"), a.submission], check=True)
     rc = subprocess.run([sys.executable, os.path.join(ROOT, "tools", "check_anonymity.py"),
                          os.path.join(a.submission, "paper_review.pdf"), os.path.join(a.submission, "supplement.pdf"),
                          os.path.join(a.submission, "supplementary_anonymous.zip")]).returncode
-    shutil.copy(a.zip, os.path.join(a.submission, "results_molab.zip"))
     print("anonymity check exit code", rc)
 
 

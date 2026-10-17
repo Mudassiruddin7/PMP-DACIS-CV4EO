@@ -19,10 +19,4 @@
     (g) at ($(m)!0.5!(p2)+(0.95,-1.25)$) {$G_{\mathrm{meta}}$: mean filter-gradient\\norm of the episode loss};
   \draw[arr, dashed, red!60!black] (m.south) -- ++(0,-0.35) |- (g.west);
   \draw[arr, dashed, red!60!black] (g.east) -| (p2.south);
-  \node[draw, rounded corners=1.5pt, fill=yellow!8, align=left, inner sep=3pt, line width=0.5pt, text width=6.0cm, font=\scriptsize]
-    (d) at ($(s0)!0.5!(r1)+(0.2,-1.55)$)
-    {\textbf{DACIS} of a mid channel $c$, ranked within its block:\\
-     $\lambda_G\,\mathrm{rk}(\Gs_c)+\lambda_V\,\mathrm{rk}(\Vs_c)+\lambda_D\,\mathrm{rk}(\Ds_c)$\\
-     $\Gs$: filter-gradient norm; $\Vs$: variance of the pooled activation; $\Ds$: Fisher ratio over the class labels. P2 multiplies the score by $1+\gamma\,\mathrm{rk}(G_{\mathrm{meta}})$. Block $b$ keeps its top $m_b$ channels.};
-  \draw[arr, gray] (p1.south) -- (p1.south |- d.north);
 \end{tikzpicture}

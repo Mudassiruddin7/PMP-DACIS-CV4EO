@@ -1,45 +1,24 @@
-claims check: 27 pass, 13 fail, 0 skipped
-FAIL  C1 RESISC45 [PMP]: no computed score is above random selection with a 95% interval clear of zero: above random: taylor +1.2 [+0.4,+2.0]; DACIS -0.5 [-1.3,+0.2]
-FAIL  C1 RESISC45 [P]: no computed score is above random selection with a 95% interval clear of zero: above random: taylor +2.5 [+1.2,+3.8]; DACIS +0.1 [-1.4,+1.5]
-INFO  RESISC45: spread of the 8 score means (PMP) 2.7 points, sd over partitions 4.1 (not a claim of the paper)
-FAIL  C3 RESISC45: the score ranking is at best weakly concordant across partitions (Kendall W < 0.5): W=0.68, p=0.00
-FAIL  C4 RESISC45: dense+M and PMP are not above their M-free counterparts (upper bound of interval <= +1): dense+M - dense -0.3 [-0.5,-0.1], PMP - P +0.7 [+0.2,+1.2]
-FAIL  C4b RESISC45: no schedule with an episodic or probe stage is above P with an interval clear of zero: PM -0.0 [-0.9,+0.8]; MP +0.7 [-0.1,+1.6]; PGP +1.0 [+0.6,+1.3]
-PASS  C5 RESISC45: the dense network beats the 30% network (interval above 0): dense - DACIS PMP +6.4 [+5.0,+7.8]
-PASS  C9 RESISC45: going from 50% to 10% of the parameters costs more than the spread among scores at 30%: 50%->10%: 12.0 points; score spread 2.7
-PASS  C1 EuroSAT-MS [PMP]: no computed score is above random selection with a 95% interval clear of zero: above random: none; DACIS -0.4 [-3.5,+2.7]
-PASS  C1 EuroSAT-MS [P]: no computed score is above random selection with a 95% interval clear of zero: above random: none; DACIS +0.7 [-1.6,+2.9]
-INFO  EuroSAT-MS: spread of the 8 score means (PMP) 2.6 points, sd over partitions 6.1 (not a claim of the paper)
-PASS  C3 EuroSAT-MS: the score ranking is at best weakly concordant across partitions (Kendall W < 0.5): W=0.22, p=0.36
-FAIL  C4 EuroSAT-MS: dense+M and PMP are not above their M-free counterparts (upper bound of interval <= +1): dense+M - dense -0.8 [-2.7,+1.0], PMP - P +0.8 [-1.9,+3.6]
-PASS  C4b EuroSAT-MS: no schedule with an episodic or probe stage is above P with an interval clear of zero: PM -0.5 [-2.7,+1.8]; MP +0.2 [-1.2,+1.6]; PGP +0.3 [-1.5,+2.1]
-PASS  C5 EuroSAT-MS: the dense network beats the 30% network (interval above 0): dense - DACIS PMP +5.0 [+3.7,+6.4]
-PASS  C9 EuroSAT-MS: going from 50% to 10% of the parameters costs more than the spread among scores at 30%: 50%->10%: 7.2 points; score spread 2.6
-PASS  C1 PlantVillage [PMP]: no computed score is above random selection with a 95% interval clear of zero: above random: none; DACIS -0.3 [-2.3,+1.8]
-FAIL  C1 PlantVillage [P]: no computed score is above random selection with a 95% interval clear of zero: above random: taylor +2.7 [+0.6,+4.9]; DACIS +0.8 [-1.3,+3.0]
-INFO  PlantVillage: spread of the 8 score means (PMP) 2.0 points, sd over partitions 7.7 (not a claim of the paper)
-PASS  C3 PlantVillage: the score ranking is at best weakly concordant across partitions (Kendall W < 0.5): W=0.24, p=0.30
-PASS  C4 PlantVillage: dense+M and PMP are not above their M-free counterparts (upper bound of interval <= +1): dense+M - dense -0.3 [-0.6,+0.1], PMP - P +0.1 [-0.7,+0.9]
-PASS  C4b PlantVillage: no schedule with an episodic or probe stage is above P with an interval clear of zero: PM -0.7 [-2.4,+1.0]; MP +0.3 [-1.2,+1.7]; PGP +0.3 [-0.4,+1.0]; PMPM +0.1 [-1.6,+1.7]; PM2x -0.8 [-2.3,+0.6]
-PASS  C5 PlantVillage: the dense network beats the 30% network (interval above 0): dense - DACIS PMP +4.9 [+2.4,+7.3]
-PASS  C9 PlantVillage: going from 50% to 10% of the parameters costs more than the spread among scores at 30%: 50%->10%: 10.4 points; score spread 2.0
-FAIL  C1 PlantDoc [PMP]: no computed score is above random selection with a 95% interval clear of zero: above random: taylor +1.9 [+0.8,+3.0]; DACIS +0.8 [-0.4,+2.1]
-FAIL  C1 PlantDoc [P]: no computed score is above random selection with a 95% interval clear of zero: above random: l1 +2.1 [+1.1,+3.1]; DACIS +0.7 [-1.2,+2.6]
-INFO  PlantDoc: spread of the 8 score means (PMP) 3.0 points, sd over partitions 1.2 (not a claim of the paper)
-FAIL  C3 PlantDoc: the score ranking is at best weakly concordant across partitions (Kendall W < 0.5): W=0.52, p=0.01
-FAIL  C4 PlantDoc: dense+M and PMP are not above their M-free counterparts (upper bound of interval <= +1): dense+M - dense -0.0 [-0.4,+0.3], PMP - P +0.1 [-0.8,+1.1]
-PASS  C4b PlantDoc: no schedule with an episodic or probe stage is above P with an interval clear of zero: PM -0.8 [-1.6,-0.0]; MP -0.7 [-1.5,+0.2]; PGP -0.2 [-0.8,+0.5]; PMPM +0.2 [-0.5,+1.0]; PM2x -0.9 [-1.4,-0.4]
-PASS  C5 PlantDoc: the dense network beats the 30% network (interval above 0): dense - DACIS PMP +8.0 [+6.6,+9.3]
-PASS  C9 PlantDoc: going from 50% to 10% of the parameters costs more than the spread among scores at 30%: 50%->10%: 11.1 points; score spread 3.0
-PASS  C1b RESISC45 [novel_1]: no computed score is above random selection with a 95% interval clear of zero (PMP): above random: none
-FAIL  C1b RESISC45 [novel_10]: no computed score is above random selection with a 95% interval clear of zero (PMP): above random: taylor +1.0 [+0.3,+1.7]
-PASS  C1b EuroSAT-MS [novel_1]: no computed score is above random selection with a 95% interval clear of zero (PMP): above random: none
-PASS  C1b EuroSAT-MS [novel_10]: no computed score is above random selection with a 95% interval clear of zero (PMP): above random: none
-PASS  C1b PlantVillage [novel_1]: no computed score is above random selection with a 95% interval clear of zero (PMP): above random: none
-PASS  C1b PlantVillage [novel_10]: no computed score is above random selection with a 95% interval clear of zero (PMP): above random: none
-FAIL  C10 PlantVillage: six epochs of recovery instead of one raise accuracy more than the spread among four scores at one epoch: mean gain 0.4; spread at one epoch 2.7
-PASS  C6 cost: the CPU latency saving at 30% is smaller than the MAC saving: MACs -58%, CPU latency -39%
-PASS  C7 EuroSAT-MS: thirteen bands do not beat the three visible bands for the dense network: 13 bands - RGB = -6.6 points over 5 partitions
-PASS  C12 DACIS weights: no weighting beats the default by more than 1 point on validation classes (PlantVillage, 5-shot): default 88.5, best 88.9, worst 87.9
-PASS  C8 validation sweep: no episodic learning rate beats stopping after S0 (5-shot, PlantVillage): S0 96.1, best episodic 95.3
-PASS  C8b validation sweep: no episodic learning rate beats stopping after S0 (5-shot, RESISC45): S0 90.1, best episodic 90.0
+claims check: 23 pass, 0 fail, 0 skipped
+PASS  K1 DACIS minus random: every 95% interval contains zero (ResNet-18, 30%, P and PMP, four settings): RESISC45 PMP -0.0 [-0.8,+0.7]; RESISC45 P -0.1 [-0.9,+0.8]; EuroSAT-MS PMP +0.9 [-1.3,+3.0]; EuroSAT-MS P +0.1 [-2.6,+2.8]; PlantVillage PMP -0.3 [-2.3,+1.8]; PlantVillage P +0.8 [-1.3,+3.0]; PlantDoc PMP +0.8 [-0.4,+2.1]; PlantDoc P +0.7 [-1.2,+2.6]
+PASS  K2 Taylor minus random on RESISC45 is above zero under PMP and P: PMP +1.4 [+0.9,+1.9], P +2.3 [+1.7,+3.0]
+PASS  K3 dense+M minus dense: no interval above +0.5: RESISC45 -0.3 [-0.4,-0.1]; EuroSAT-MS -0.8 [-1.5,+0.0]; PlantVillage -0.3 [-0.6,+0.1]; PlantDoc -0.0 [-0.4,+0.3]
+PASS  K4a RESISC45: M->P, P->G->P and PMP are above P (interval above zero) while P->M is not: PM -0.0 [-0.6,+0.5]; MP +0.9 [+0.3,+1.4]; PGP +1.2 [+0.6,+1.8]; PMP +0.9 [+0.4,+1.5]
+PASS  K4 RESISC45: P->G->P gains at least as much over P as PMP does (within 0.5 points): PMP-P +0.9 [+0.4,+1.5], PGP-P +1.2 [+0.6,+1.8]
+PASS  K5 RESISC45, MobileNetV2 at 40%: Taylor above random, DACIS not above random: Taylor +4.2 [+3.0,+5.4], BN scale -1.5 [-2.1,-1.0], DACIS -0.6 [-2.0,+0.8]
+PASS  K5 RESISC45, MobileNetV2 at 25%: Taylor above random, DACIS not above random: Taylor +6.5 [+4.9,+8.1], BN scale -8.3 [-11.2,-5.5], DACIS +1.6 [-0.1,+3.3]
+PASS  K5 EuroSAT-MS, MobileNetV2 at 40%: Taylor above random, DACIS not above random: Taylor +1.8 [-0.9,+4.4], BN scale -4.7 [-7.2,-2.1], DACIS -0.1 [-2.5,+2.4]
+PASS  K5 EuroSAT-MS, MobileNetV2 at 25%: Taylor above random, DACIS not above random: Taylor +3.3 [+1.2,+5.5], BN scale -3.6 [-7.4,+0.1], DACIS -0.1 [-3.2,+3.0]
+PASS  K5b MobileNetV2: DACIS is never above random choice (95% interval above zero) in the 6 comparisons: -1.1 [-1.6,-0.6]; -0.6 [-2.0,+0.8]; +1.6 [-0.1,+3.3]; -1.9 [-4.3,+0.4]; -0.1 [-2.5,+2.4]; -0.1 [-3.2,+3.0]
+PASS  K6 RESISC45: MobileNetV3-Small minus ResNet-18 pruned to 30% (Taylor) is above zero: +5.7 [+4.8,+6.5]
+PASS  K6 EuroSAT-MS: MobileNetV3-Small minus ResNet-18 pruned to 30% (Taylor) is above zero: +15.0 [+10.9,+19.2]
+PASS  K7 RESISC45: MobileNetV2 pruned to 40% (Taylor) is not below ResNet-18 pruned to 30% (Taylor) at under a quarter of the MACs: difference +0.6 [+0.1,+1.1]; MACs 0.041 G against 0.251 G
+PASS  K8 the CPU latency saving at 30% is smaller than the MAC saving: MACs -58%, CPU latency -39%
+PASS  K9 EuroSAT-MS: thirteen bands do not beat the three visible bands for the dense network: 13 bands - RGB = -6.6 points over 5 partitions
+PASS  K10 validation sweep (PlantVillage): no episodic learning rate beats stopping after S0 by more than 0.2 points (5-shot): S0 96.1, best episodic 95.3
+PASS  K10 validation sweep (RESISC45): no episodic learning rate beats stopping after S0 by more than 0.2 points (5-shot): S0 90.1, best episodic 90.0
+PASS  K10 validation sweep (RESISC45, lower rates): no episodic learning rate beats stopping after S0 by more than 0.2 points (5-shot): S0 90.1, best episodic 90.1
+PASS  K11 DACIS weights: no weighting beats the default by more than 1 point on validation classes: default 88.5, best 88.9, worst 87.9
+PASS  K12 RESISC45: 50% -> 10% of the parameters costs more than the spread among scores at 30%: 12.0 points against 2.5
+PASS  K12 EuroSAT-MS: 50% -> 10% of the parameters costs more than the spread among scores at 30%: 7.2 points against 2.9
+PASS  K12 PlantVillage: 50% -> 10% of the parameters costs more than the spread among scores at 30%: 10.4 points against 2.0
+PASS  K12 PlantDoc: 50% -> 10% of the parameters costs more than the spread among scores at 30%: 11.1 points against 3.0

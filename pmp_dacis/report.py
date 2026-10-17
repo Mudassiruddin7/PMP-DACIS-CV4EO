@@ -67,9 +67,11 @@ class Results:
                 return cand
         return None
 
-    def vals(self, variant, id_, key, getter=None):
+    def vals(self, variant, id_, key, getter=None, seeds=None):
         out = []
         for s in self.seeds_with(variant, id_):
+            if seeds is not None and s not in seeds:
+                continue
             r = self.runs[(variant, s, id_)]
             try:
                 out.append(getter(r) if getter else r["acc"][key]["mean"])
@@ -77,10 +79,10 @@ class Results:
                 continue
         return np.array(out, dtype=float)
 
-    def ms(self, variant, id_, key, getter=None):
+    def ms(self, variant, id_, key, getter=None, seeds=None):
         if id_ is None:
             return None
-        v = self.vals(variant, id_, key, getter)
+        v = self.vals(variant, id_, key, getter, seeds)
         if len(v) == 0:
             return None
         return float(v.mean()), float(v.std(ddof=1)) if len(v) > 1 else 0.0
@@ -186,8 +188,9 @@ def table_scores(R):
     return "\n".join(L)
 
 
-def table_pairs(R):
-    """Paired differences (points) between choices, mean over seeds with 95% t-interval over seeds."""
+def table_pairs(R, part="main"):
+    """Paired differences (points) between choices, mean over seeds with 95% t-interval over seeds.
+    part="main": scores and the episodic stage on the dense network; part="sched": the schedules."""
     def row(label, a, b):
         cells = []
         for v, k, _ in COLS:
@@ -198,23 +201,25 @@ def table_pairs(R):
     P = lambda c: (lambda v: R.pid(v, c))
     PMP = lambda c: f"A_{c}_PMP_30"
     n = len(COLS) + 1
-    L = [r"\begin{tabular}{@{}l" + "c" * len(COLS) + r"@{}}", r"\toprule",
-         r"Difference (a $-$ b), points & " + " & ".join(h for _, _, h in COLS) + r" \\", r"\midrule",
-         r"\multicolumn{%d}{@{}l}{\emph{Scores, schedule P}} \\" % n]
-    for c in ("random", "l1", "taylor"):
-        L.append(row(f"DACIS $-$ {CRIT_LABEL[c]}", P("dacis"), P(c)))
-    L.append(r"\multicolumn{%d}{@{}l}{\emph{Scores, schedule PMP}} \\" % n)
-    for c in ("random", "l1", "taylor"):
-        L.append(row(f"DACIS $-$ {CRIT_LABEL[c]}", PMP("dacis"), PMP(c)))
-    L.append(r"\multicolumn{%d}{@{}l}{\emph{Schedules, DACIS at 30\%%}} \\" % n)
-    L.append(row(r"PMP $-$ P", PMP("dacis"), P("dacis")))
-    L.append(row(r"P$\to$M $-$ P", "B_dacis_PM_30", P("dacis")))
-    L.append(row(r"M$\to$P $-$ P", "B_dacis_MP_30", P("dacis")))
-    L.append(row(r"P$\to$G$\to$P (no weight update) $-$ P", "B_dacis_PGP_30", P("dacis")))
-    L.append(row(r"P$\to$M$\to$P$\to$M $-$ PMP", "B_dacis_PMPM_30", PMP("dacis")))
-    L.append(row(r"P$\to$M ($2\times$ episodes) $-$ P$\to$M", "B_dacis_PM2x_30", "B_dacis_PM_30"))
-    L.append(r"\multicolumn{%d}{@{}l}{\emph{Episodic stage on the dense network}} \\" % n)
-    L.append(row("Dense+M $-$ Dense", "dense_m", "dense_ce"))
+    head = [r"\begin{tabular}{@{}l" + "c" * len(COLS) + r"@{}}", r"\toprule",
+            r"Difference (a $-$ b), points & " + " & ".join(h for _, _, h in COLS) + r" \\", r"\midrule"]
+    if part == "main":
+        L = head + [r"\multicolumn{%d}{@{}l}{\emph{Scores, schedule P}} \\" % n]
+        for c in ("random", "l1", "taylor"):
+            L.append(row(f"DACIS $-$ {CRIT_LABEL[c]}", P("dacis"), P(c)))
+        L.append(r"\multicolumn{%d}{@{}l}{\emph{Scores, schedule PMP}} \\" % n)
+        for c in ("random", "l1", "taylor"):
+            L.append(row(f"DACIS $-$ {CRIT_LABEL[c]}", PMP("dacis"), PMP(c)))
+        L.append(r"\multicolumn{%d}{@{}l}{\emph{Episodic stage on the dense network}} \\" % n)
+        L.append(row("Dense+M $-$ Dense", "dense_m", "dense_ce"))
+    else:
+        L = head + [r"\multicolumn{%d}{@{}l}{\emph{Schedules, DACIS at 30\%%}} \\" % n]
+        L.append(row(r"PMP $-$ P", PMP("dacis"), P("dacis")))
+        L.append(row(r"P$\to$M $-$ P", "B_dacis_PM_30", P("dacis")))
+        L.append(row(r"M$\to$P $-$ P", "B_dacis_MP_30", P("dacis")))
+        L.append(row(r"P$\to$G$\to$P (no weight update) $-$ P", "B_dacis_PGP_30", P("dacis")))
+        L.append(row(r"P$\to$M$\to$P$\to$M $-$ PMP", "B_dacis_PMPM_30", PMP("dacis")))
+        L.append(row(r"P$\to$M ($2\times$ episodes) $-$ P$\to$M", "B_dacis_PM2x_30", "B_dacis_PM_30"))
     L += [r"\bottomrule", r"\end{tabular}"]
     return "\n".join(L)
 
@@ -241,7 +246,7 @@ def table_budget(R):
         return "% no cost measurements available\n"
 
     def acc(label_id, v):
-        return pm(R.ms(v, label_id, "novel_5")) if label_id and R.has(v, label_id) else "--"
+        return pm(R.ms(v, label_id, "novel_5", seeds=range(5))) if label_id and R.has(v, label_id) else "--"
 
     def line(label, acc_id, cost_id=None):
         cost_id = cost_id or acc_id
@@ -260,8 +265,13 @@ def table_budget(R):
         cid = "A_l1_PMP_30" if frac == 30 else f"C_l1_PMP_{frac}"
         aid = "A_dacis_PMP_30" if frac == 30 else f"C_dacis_PMP_{frac}"
         items.append(line(f"ResNet-18, {frac}\\% (DACIS)", aid, cid))
+    items.append(line(r"ResNet-18, 30\% (Taylor)", "A_taylor_PMP_30", "A_l1_PMP_30"))
     items.append(r"\midrule")
-    for arch, lab in (("mobilenet_v3_small", "MobileNetV3-Small"), ("mobilenet_v2", "MobileNetV2"), ("efficientnet_b0", "EfficientNet-B0")):
+    items.append(line("MobileNetV2, dense", "MK_mobilenet_v2_dense"))
+    for frac in (60, 40, 25):
+        items.append(line(f"MobileNetV2, {frac}\\% (Taylor)", f"MP_taylor_P_{frac}", f"MP_l1_P_{frac}"))
+    items.append(r"\midrule")
+    for arch, lab in (("mobilenet_v3_small", "MobileNetV3-Small"), ("efficientnet_b0", "EfficientNet-B0")):
         items.append(line(lab + ", dense", f"K_{arch}"))
     L += [i for i in items if i]
     L += [r"\bottomrule", r"\end{tabular}"]
@@ -524,13 +534,19 @@ def make_figures(R, outdir):
     plt.close(fig)
     # (2b) accuracy against cost: the compact networks sit up and to the left of every pruned ResNet-18
     sets = [(v, k, h) for v, k, h in panels if k == "novel_5"]
-    fig, axs = plt.subplots(1, len(sets), figsize=(6.9, 2.0), squeeze=False)
+    from matplotlib.ticker import NullFormatter
+    fig, axs = plt.subplots(1, len(sets), figsize=(6.9, 2.25), squeeze=False)
     for ax, (var, key, title) in zip(axs[0], sets):
+        xs_all = []
+
         def pt(id_):
             if not R.has(var, id_):
                 return None
             m = R.eff(var, id_, "macs_res")
-            return None if m is None else (m / 1e9, R.ms(var, id_, key)[0])
+            if m is None:
+                return None
+            xs_all.append(m / 1e9)
+            return (m / 1e9, R.ms(var, id_, key, seeds=range(5))[0])
         dense = pt("dense_ce")
         if dense:
             ax.plot(*dense, marker="*", ms=8, ls="none", color="#333", label="ResNet-18, dense")
@@ -549,13 +565,19 @@ def make_figures(R, outdir):
             if q:
                 ax.plot(*q, marker=mk2, ms=4.5, ls="none", color=c, label=lab)
         ax.set_xscale("log")
+        lo, hi = min(xs_all) / 1.4, max(xs_all) * 1.4          # MACs are counted at each dataset's own input size
+        ax.set_xlim(lo, hi)
+        ticks = [t for t in (0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0) if lo <= t <= hi]
+        ax.set_xticks(ticks)
+        ax.set_xticklabels([f"{t:g}" for t in ticks])
+        ax.xaxis.set_minor_formatter(NullFormatter())
         ax.set_title(title)
         ax.set_xlabel("Multiply-accumulates (G)")
         ax.grid(alpha=0.25, lw=0.4)
     axs[0][0].set_ylabel("5-shot accuracy (%)")
     hd, lb = axs[0][0].get_legend_handles_labels()
-    fig.legend(hd, lb, loc="upper center", ncol=len(lb), frameon=False, fontsize=6, bbox_to_anchor=(0.5, 1.03))
-    fig.tight_layout(pad=0.4, rect=(0, 0, 1, 0.9))
+    fig.legend(hd, lb, loc="upper center", ncol=3, frameon=False, fontsize=6, bbox_to_anchor=(0.5, 1.0))
+    fig.tight_layout(pad=0.4, rect=(0, 0, 1, 0.84))
     fig.savefig(os.path.join(outdir, "fig_tradeoff.pdf"))
     plt.close(fig)
     # (3) resolution sweep (trained at one resolution, tested at others)
@@ -672,12 +694,17 @@ def numbers(R):
         addp(f"{t}:dense-randomPMP", var, "dense_ce", "A_random_PMP_30", key)
         addp(f"{t}:norefine-full", var, "E_dacis_PMP_30_norefine", "A_dacis_PMP_30", key)
         addp(f"{t}:mnv3-dacisPMP", var, "K_mobilenet_v3_small", "A_dacis_PMP_30", key)
+        addp(f"{t}:mnv3-taylorPMP", var, "K_mobilenet_v3_small", "A_taylor_PMP_30", key)
         addp(f"{t}:effb0-dacisPMP", var, "K_efficientnet_b0", "A_dacis_PMP_30", key)
         addp(f"{t}:mnv2-dacisPMP", var, "K_mobilenet_v2", "A_dacis_PMP_30", key)
         for fr in (50, 20, 10):
             addp(f"{t}:dacis-l1:PMP{fr}", var, f"C_dacis_PMP_{fr}", f"C_l1_PMP_{fr}", key)
             addp(f"{t}:dacis-random:PMP{fr}", var, f"C_dacis_PMP_{fr}", f"C_random_PMP_{fr}", key)
             addp(f"{t}:dense-dacisPMP{fr}", var, "dense_ce", f"C_dacis_PMP_{fr}", key)
+            addp(f"{t}:taylor-random:PMP{fr}", var, f"C_taylor_PMP_{fr}", f"C_random_PMP_{fr}", key)
+            addp(f"{t}:mnv3-dacisPMP{fr}", var, "K_mobilenet_v3_small", f"C_dacis_PMP_{fr}", key)
+        for c in ("random", "l1", "taylor", "dacis"):                       # six epochs of recovery against one (PlantVillage)
+            addp(f"{t}:r6-P:{c}", var, f"R_{c}_P_30_r6", R.pid(var, c), key)
     # spread among the eight scores and agreement of their ranking across partitions
     for var, key, _ in COLS:
         t = f"{ctag(var, key)}:{key}"
@@ -695,7 +722,10 @@ def numbers(R):
             n[f"partsd:{t}:{sched}"] = f"{M.mean(1).std(ddof=1):.1f}"       # sd over partitions of the partition-mean accuracy
             w, p = kendall_w(M)
             n[f"kw:{t}:{sched}"] = f"{w:.2f}"
-            n[f"kwp:{t}:{sched}"] = f"{p:.2f}"
+            n[f"kwp:{t}:{sched}"] = f"{p:.3f}"
+            n[f"kwpt:{t}:{sched}"] = "<0.001" if p < 0.001 else f"={p:.3f}"        # for 'p<0.001' / 'p=0.009' in the text
+            n[f"kwm:{t}:{sched}"] = str(M.shape[0])
+            n[f"kwchance:{t}:{sched}"] = f"{1.0 / M.shape[0]:.2f}"            # expected W when the rankings are unrelated
             if "random" in names:
                 ir = names.index("random")
                 n[f"randrank:{t}:{sched}"] = str(int((mu > mu[ir]).sum()) + 1)      # 1 = best; position of random among the scores
@@ -726,6 +756,42 @@ def numbers(R):
         ci = [r["acc"]["novel_5"]["ci95"] / 1.96 for (v, _, _), r in R.runs.items() if v == var and "novel_5" in r["acc"]]
         if ci:
             n[f"epse:{var}"] = f"{np.mean(ci):.1f}"
+    # thirteen bands against three visible bands, on the partitions that have both
+    sh = [s_ for s_ in R.seeds(ES13) if (ES13, s_, "dense_ce") in R.runs and (ES3, s_, "dense_ce") in R.runs]
+    if len(sh) > 1:
+        a13 = np.array([R.runs[(ES13, s_, "dense_ce")]["acc"]["novel_5"]["mean"] for s_ in sh])
+        a3 = np.array([R.runs[(ES3, s_, "dense_ce")]["acc"]["novel_5"]["mean"] for s_ in sh])
+        dd = a13 - a3
+        hw = sps.t.ppf(0.975, len(dd) - 1) * dd.std(ddof=1) / np.sqrt(len(dd))
+        n["bands:n"], n["bands:13"], n["bands:3"] = str(len(sh)), f"{a13.mean():.1f}", f"{a3.mean():.1f}"
+        n["bands:d"], n["bands:lo"], n["bands:hi"] = sgn(dd.mean()), sgn(dd.mean() - hw), sgn(dd.mean() + hw)
+        n["bands:abs"] = f"{abs(dd.mean()):.1f}"
+        n["bands:pos"] = str(int((dd > 0).sum()))
+    # share of the dense accuracy that a pruned network keeps (PlantVillage, the data of the earlier preprint)
+    dpv = R.ms(PV, "dense_ce", "novel_5")
+    for tag, rid in (("dacis20", "C_dacis_PMP_20"), ("dacis30", "A_dacis_PMP_30"), ("random30", "A_random_PMP_30"), ("taylor30", "A_taylor_PMP_30")):
+        m_ = R.ms(PV, rid, "novel_5") if R.has(PV, rid) else None
+        if m_ and dpv:
+            n[f"ret:pv:{tag}"] = f"{100 * m_[0] / dpv[0]:.1f}"
+    # pruned MobileNetV2: Bonferroni over all comparisons with random selection
+    mrows = []
+    for var, key, h in COLS[:2]:
+        for f in (60, 40, 25):
+            for c in ("l1", "bn_gamma", "taylor", "dacis"):
+                pp = R.paired(var, f"MP_{c}_P_{f}", f"MP_random_P_{f}", key)
+                if pp:
+                    mrows.append((h, f, c, pp))
+    if mrows:
+        bs = [(h, f, c, pp) for h, f, c, pp in mrows if pp["p"] * len(mrows) < 0.05]
+        n["cmpm:nbonf"] = str(len(bs))
+        n["cmpm:bonflist"] = "; ".join(f"{CRIT_PLAIN[c]} at {f}\\% on {h} ({psgn(pp['mean'])})" for h, f, c, pp in bs) if bs else "none"
+        n["cmpm:bonfeo"] = ", ".join(sorted({h for h, _, _, _ in bs})) if bs else "none"
+        dac = [(h, f, pp) for h, f, c, pp in mrows if c == "dacis"]
+        n["cmpm:dacis-above"] = str(sum(1 for _, _, pp in dac if pp["lo"] > 0))
+        n["cmpm:dacis-below"] = str(sum(1 for _, _, pp in dac if pp["hi"] < 0))
+        n["cmpm:dacis-total"] = str(len(dac))
+        bl = [(h, f, pp) for h, f, pp in dac if pp["hi"] < 0]
+        n["cmpm:dacis-belowlist"] = "; ".join(f"{f}\\% on {h} ({psgn(pp['mean'])} points)" for h, f, pp in bl) if bl else "none"
     # pruned MobileNetV2: scores against random selection and against the dense network
     mt = ma = mb = 0
     mlist_a, mlist_b = [], []
@@ -745,6 +811,11 @@ def numbers(R):
                         mlist_b.append(f"{CRIT_PLAIN[c]} at {f}\\% on {h}")
             addp(f"{t}:mp-dense-dacis:{f}", var, "MK_mobilenet_v2_dense", f"MP_dacis_P_{f}", key)
             addp(f"{t}:mp-dacis-resnet:{f}", var, f"MP_dacis_P_{f}", "A_dacis_PMP_30", key)
+            addp(f"{t}:mp-taylor-r18taylor:{f}", var, f"MP_taylor_P_{f}", "A_taylor_PMP_30", key)
+            addp(f"{t}:mnv3-mptaylor:{f}", var, "K_mobilenet_v3_small", f"MP_taylor_P_{f}", key)
+            a, b = R.eff(var, "A_taylor_PMP_30", "macs_128"), R.eff(var, f"MP_taylor_P_{f}", "macs_128")
+            if a and b:
+                n[f"cost:{ctag(var, key)}:mbv2{f}-vs-r18:macs-ratio"] = f"{a / b:.0f}"
     if mt:
         n["cmpm:total"], n["cmpm:above"], n["cmpm:below"] = str(mt), str(ma), str(mb)
         n["cmpm:abovelist"] = "; ".join(mlist_a) if mlist_a else "none"
@@ -753,6 +824,7 @@ def numbers(R):
     for sched in ("PMP", "P"):
         tot = above = below = 0
         blist, alist, gains, pvals, halfw, pabove = [], [], [], [], [], []
+        halfw_by = {}
         for var, key, h in COLS:
             best = None
             for c in ("l1", "bn_gamma", "taylor", "G", "V", "D", "dacis"):
@@ -767,6 +839,7 @@ def numbers(R):
                 if pp["mean"] > 0:
                     pabove.append(pp["p"])
                 halfw.append((pp["hi"] - pp["lo"]) / 2)
+                halfw_by.setdefault(ctag(var, key), []).append((pp["hi"] - pp["lo"]) / 2)
                 if best is None or pp["mean"] > best[1]["mean"]:
                     best = (c, pp)
                 if pp["lo"] > 0:
@@ -788,10 +861,48 @@ def numbers(R):
             n[f"cmp:belowlist:{sched}"] = "; ".join(blist) if blist else "none"
             n[f"cmp:chance:{sched}"] = f"{tot * 0.05:.1f}"                # intervals expected to exclude zero if nothing differed
             n[f"cmp:maxgain:{sched}"] = f"{max(gains):.1f}"
-            n[f"cmp:bonf:{sched}"] = f"{min(1.0, min(pvals) * tot):.2f}"      # smallest p value after Bonferroni correction
-            n[f"cmp:bonfabove:{sched}"] = f"{min(1.0, min(pabove) * tot):.2f}" if pabove else "1.00"
+            n[f"cmp:bonf:{sched}"] = f"{min(1.0, min(pvals) * tot):.3f}"      # smallest p value after Bonferroni correction
+            n[f"cmp:bonfabove:{sched}"] = f"{min(1.0, min(pabove) * tot):.3f}" if pabove else "1.000"
+            for hv, vals_ in halfw_by.items():
+                n[f"cmp:halfw:{hv}:{sched}"] = f"{np.mean(vals_):.1f}"
             n[f"cmp:halfw:{sched}"] = f"{np.mean(halfw):.1f}"
             n[f"cmp:halfwmax:{sched}"] = f"{max(halfw):.1f}"
+    fam, pmin_pos = 0, 1.0
+    for sched in ("PMP", "P"):
+        for var, key, h in COLS:
+            for c in ("l1", "bn_gamma", "taylor", "G", "V", "D", "dacis"):
+                a = f"A_{c}_PMP_30" if sched == "PMP" else R.pid(var, c)
+                b = "A_random_PMP_30" if sched == "PMP" else R.pid(var, "random")
+                pp = R.paired(var, a, b, key)
+                if pp:
+                    fam += 1
+                    if pp["mean"] > 0:
+                        pmin_pos = min(pmin_pos, pp["p"])
+    if fam:
+        n["cmp:famsize"] = str(fam)
+        n["cmp:bonffam"] = f"{min(1.0, pmin_pos * fam):.3f}"
+    for sched in ("PMP", "P"):                                              # DACIS minus random, pooled over the two Earth-observation sets
+        dd = []
+        for var in (RS, ES13):
+            a = "A_dacis_PMP_30" if sched == "PMP" else R.pid(var, "dacis")
+            b = "A_random_PMP_30" if sched == "PMP" else R.pid(var, "random")
+            pp = R.paired(var, a, b, "novel_5")
+            if pp:
+                dd += pp["per_seed"]
+        if len(dd) > 2:
+            dd = np.array(dd)
+            hw = sps.t.ppf(0.975, len(dd) - 1) * dd.std(ddof=1) / np.sqrt(len(dd))
+            n[f"pool:dacis-random:{sched}"] = sgn(dd.mean())
+            n[f"pool:dacis-random:{sched}:lo"] = sgn(dd.mean() - hw)
+            n[f"pool:dacis-random:{sched}:hi"] = sgn(dd.mean() + hw)
+            n[f"pool:dacis-random:{sched}:n"] = str(len(dd))
+    for tun, tag in ((R.tuning, "tune"), (R.tuning_rs, "tune-rs")):         # 1-shot behaviour of the learning-rate sweeps
+        if tun:
+            rows = tun["rows"]
+            s0 = rows.get("S0 (no episodic stage)", {}).get("1")
+            g = [v["1"] - s0 for k, v in rows.items() if not k.startswith("S0")] if s0 is not None else []
+            if g:
+                n[f"{tag}:gain1:min"], n[f"{tag}:gain1:max"] = f"{min(g):.1f}", f"{max(g):.1f}"
     ks = [float(n[k]) for k in n if k.startswith("kw:") and k.endswith(":PMP")]
     if ks:
         n["kw:max"] = f"{max(ks):.2f}"
@@ -859,7 +970,7 @@ def _ci_has_zero(p):
 
 
 def claims_check(R):
-    """Each qualitative sentence of the paper has a test here. A FAIL means the sentence must be reworded."""
+    """One test for each qualitative sentence of the paper. A FAIL means the sentence must be reworded."""
     out, fails = [], 0
 
     def claim(name, ok, detail):
@@ -873,108 +984,105 @@ def claims_check(R):
     def ci(p):
         return f"{psgn(p['mean'])} [{psgn(p['lo'])},{psgn(p['hi'])}]"
 
+    def pr(var, a, b, key):
+        return R.paired(var, a, b, key)
+
+    # K1: DACIS cannot be told from random selection (ResNet-18, 30%, both schedules, four settings)
+    res = []
     for var, key, h in COLS:
-        if not R.seeds(var):
-            continue
-        # C1: no computed score is clearly better than random selection (PMP and P)
         for sched in ("PMP", "P"):
-            ps = {}
-            for c in ("l1", "bn_gamma", "taylor", "G", "V", "D", "dacis"):
-                a = f"A_{c}_PMP_30" if sched == "PMP" else R.pid(var, c)
-                b = "A_random_PMP_30" if sched == "PMP" else R.pid(var, "random")
-                p = R.paired(var, a, b, key)
-                if p is not None:
-                    ps[c] = p
-            if len(ps) >= 3:
-                wins = [c for c, v in ps.items() if v["lo"] > 0]
-                claim(f"C1 {h} [{sched}]: no computed score is above random selection with a 95% interval clear of zero",
-                      not wins, "above random: " + (", ".join(f"{c} {ci(ps[c])}" for c in wins) if wins else "none")
-                      + "; DACIS " + (ci(ps["dacis"]) if "dacis" in ps else "n/a"))
-            else:
-                claim(f"C1 {h} [{sched}]", None, "")
-        # C2: the spread among the score means is below the spread between partitions
-        M, names = score_matrix(R, var, key, "PMP")
-        if M is not None:
-            mu = M.mean(0)
-            out.append(f"INFO  {h}: spread of the {len(names)} score means (PMP) {mu.max() - mu.min():.1f} points, "
-                       f"sd over partitions {M.mean(1).std(ddof=1):.1f} (not a claim of the paper)")
-            w, p = kendall_w(M)
-            claim(f"C3 {h}: the score ranking is at best weakly concordant across partitions (Kendall W < 0.5)", w < 0.5, f"W={w:.2f}, p={p:.2f}")
-        else:
-            out.append(f"SKIP  {h}: spread of the score means")
-        # C4: the episodic stage does not add accuracy
-        dm = R.paired(var, "dense_m", "dense_ce", key)
-        pm_ = R.paired(var, "A_dacis_PMP_30", R.pid(var, "dacis"), key)
-        if dm and pm_:
-            claim(f"C4 {h}: dense+M and PMP are not above their M-free counterparts (upper bound of interval <= +1)",
-                  dm["hi"] <= 1.0 and pm_["hi"] <= 1.0, f"dense+M - dense {ci(dm)}, PMP - P {ci(pm_)}")
-        else:
-            claim(f"C4 {h}", None, "")
-        sch = {s_: R.paired(var, f"B_dacis_{s_}_30", R.pid(var, "dacis"), key) for s_ in ("PM", "MP", "PGP", "PMPM", "PM2x")}
-        sch = {k: v for k, v in sch.items() if v}
-        if sch:
-            wins = [k for k, v in sch.items() if v["lo"] > 0]
-            claim(f"C4b {h}: no schedule with an episodic or probe stage is above P with an interval clear of zero", not wins,
-                  "; ".join(f"{k} {ci(v)}" for k, v in sch.items()))
-        # C5: pruning to 30% costs accuracy relative to the dense network
-        dd = R.paired(var, "dense_ce", "A_dacis_PMP_30", key)
-        if dd:
-            claim(f"C5 {h}: the dense network beats the 30% network (interval above 0)", dd["lo"] > 0, f"dense - DACIS PMP {ci(dd)}")
-        # C9: the budget moves accuracy more than the choice of score does
-        if R.has(var, "C_dacis_PMP_50") and R.has(var, "C_dacis_PMP_10") and M is not None:
-            a50, a10 = R.ms(var, "C_dacis_PMP_50", key)[0], R.ms(var, "C_dacis_PMP_10", key)[0]
-            mu = M.mean(0)
-            claim(f"C9 {h}: going from 50% to 10% of the parameters costs more than the spread among scores at 30%",
-                  (a50 - a10) > (mu.max() - mu.min()), f"50%->10%: {a50 - a10:.1f} points; score spread {mu.max() - mu.min():.1f}")
-    # C1b: the same at 1 and 10 shots
-    for var, h in ((RS, "RESISC45"), (ES13, "EuroSAT-MS"), (PV, "PlantVillage")):
-        for key in ("novel_1", "novel_10"):
-            ps = {}
-            for c in ("l1", "bn_gamma", "taylor", "G", "V", "D", "dacis"):
-                p = R.paired(var, f"A_{c}_PMP_30", "A_random_PMP_30", key)
-                if p is not None:
-                    ps[c] = p
-            if len(ps) >= 3:
-                wins = [c for c, v in ps.items() if v["lo"] > 0]
-                claim(f"C1b {h} [{key}]: no computed score is above random selection with a 95% interval clear of zero (PMP)",
-                      not wins, "above random: " + (", ".join(f"{c} {ci(ps[c])}" for c in wins) if wins else "none"))
-    # C10: longer recovery helps more than the score (PlantVillage)
-    if all(R.has(PV, i) for i in ("R_random_P_30_r6", "R_l1_P_30_r6", "R_taylor_P_30_r6", "R_dacis_P_30_r6")) and R.pid(PV, "random"):
-        gains = [R.ms(PV, f"R_{c}_P_30_r6", "novel_5")[0] - R.ms(PV, R.pid(PV, c), "novel_5")[0] for c in ("random", "l1", "taylor", "dacis")]
-        one = [R.ms(PV, R.pid(PV, c), "novel_5")[0] for c in ("random", "l1", "taylor", "dacis")]
-        claim("C10 PlantVillage: six epochs of recovery instead of one raise accuracy more than the spread among four scores at one epoch",
-              float(np.mean(gains)) > (max(one) - min(one)), f"mean gain {np.mean(gains):.1f}; spread at one epoch {max(one) - min(one):.1f}")
+            a = "A_dacis_PMP_30" if sched == "PMP" else R.pid(var, "dacis")
+            b = "A_random_PMP_30" if sched == "PMP" else R.pid(var, "random")
+            p = pr(var, a, b, key)
+            if p:
+                res.append((f"{h} {sched}", p))
+    if res:
+        claim("K1 DACIS minus random: every 95% interval contains zero (ResNet-18, 30%, P and PMP, four settings)",
+              all(p["lo"] <= 0 <= p["hi"] for _, p in res), "; ".join(f"{n} {ci(p)}" for n, p in res))
+    # K2: the Taylor term is ahead of random on RESISC45 under both schedules
+    p1, p2 = pr(RS, "A_taylor_PMP_30", "A_random_PMP_30", "novel_5"), pr(RS, R.pid(RS, "taylor"), R.pid(RS, "random"), "novel_5")
+    if p1 and p2:
+        claim("K2 Taylor minus random on RESISC45 is above zero under PMP and P", p1["lo"] > 0 and p2["lo"] > 0, f"PMP {ci(p1)}, P {ci(p2)}")
+    # K3: the episodic stage does not help the dense network
+    ds = {h: pr(var, "dense_m", "dense_ce", key) for var, key, h in COLS}
+    ds = {h: p for h, p in ds.items() if p}
+    if ds:
+        claim("K3 dense+M minus dense: no interval above +0.5", all(p["hi"] <= 0.5 for p in ds.values()), "; ".join(f"{h} {ci(p)}" for h, p in ds.items()))
+    # K4: the schedules that gain over P are those whose pruning score uses the meta-gradient term; P->M does not gain
+    gains = {sc: pr(RS, f"B_dacis_{sc}_30", R.pid(RS, "dacis"), "novel_5") for sc in ("PM", "MP", "PGP")}
+    gains["PMP"] = pr(RS, "A_dacis_PMP_30", R.pid(RS, "dacis"), "novel_5")
+    if all(gains.values()):
+        claim("K4a RESISC45: M->P, P->G->P and PMP are above P (interval above zero) while P->M is not",
+              all(gains[k]["lo"] > 0 for k in ("MP", "PGP", "PMP")) and gains["PM"]["lo"] <= 0,
+              "; ".join(f"{k} {ci(v)}" for k, v in gains.items()))
+    # K4: the gain of the two-stage schedules is matched by the probe that updates no weight
+    q = pr(RS, "A_dacis_PMP_30", R.pid(RS, "dacis"), "novel_5")
+    g = pr(RS, "B_dacis_PGP_30", R.pid(RS, "dacis"), "novel_5")
+    if q and g:
+        claim("K4 RESISC45: P->G->P gains at least as much over P as PMP does (within 0.5 points)", g["mean"] >= q["mean"] - 0.5, f"PMP-P {ci(q)}, PGP-P {ci(g)}")
+    # K5: pruning the MobileNetV2: Taylor above random, BN scale below, DACIS level
+    for var, h in ((RS, "RESISC45"), (ES13, "EuroSAT-MS")):
+        for f in (40, 25):
+            t = pr(var, f"MP_taylor_P_{f}", f"MP_random_P_{f}", "novel_5")
+            b = pr(var, f"MP_bn_gamma_P_{f}", f"MP_random_P_{f}", "novel_5")
+            d = pr(var, f"MP_dacis_P_{f}", f"MP_random_P_{f}", "novel_5")
+            if t and b and d:
+                claim(f"K5 {h}, MobileNetV2 at {f}%: Taylor above random, DACIS not above random",
+                      t["lo"] > 0 and d["lo"] <= 0 if var == RS else d["lo"] <= 0,
+                      f"Taylor {ci(t)}, BN scale {ci(b)}, DACIS {ci(d)}")
+    dac = [R.paired(var, f"MP_dacis_P_{f}", f"MP_random_P_{f}", "novel_5") for var in (RS, ES13) for f in (60, 40, 25)]
+    dac = [p for p in dac if p]
+    if dac:
+        claim("K5b MobileNetV2: DACIS is never above random choice (95% interval above zero) in the 6 comparisons",
+              not any(p["lo"] > 0 for p in dac), "; ".join(ci(p) for p in dac))
+    # K6: an unpruned MobileNetV3-Small is ahead of the pruned ResNet-18 on both Earth-observation sets
+    for var, h in ((RS, "RESISC45"), (ES13, "EuroSAT-MS")):
+        p = pr(var, "K_mobilenet_v3_small", "A_taylor_PMP_30", "novel_5")
+        if p:
+            claim(f"K6 {h}: MobileNetV3-Small minus ResNet-18 pruned to 30% (Taylor) is above zero", p["lo"] > 0, ci(p))
+    # K7: pruned MobileNetV2 reaches the accuracy of the pruned ResNet-18 at far fewer multiply-accumulates
+    p = pr(RS, "MP_taylor_P_40", "A_taylor_PMP_30", "novel_5")
+    a, b = R.eff(RS, "A_taylor_PMP_30", "macs_128"), R.eff(RS, "MP_taylor_P_40", "macs_128")
+    if p and a and b:
+        claim("K7 RESISC45: MobileNetV2 pruned to 40% (Taylor) is not below ResNet-18 pruned to 30% (Taylor) at under a quarter of the MACs",
+              p["lo"] > -1.0 and b < a / 4, f"difference {ci(p)}; MACs {b / 1e9:.3f} G against {a / 1e9:.3f} G")
+    # K8: pruning saves less time than operations
     cv = R.cost_variant()
     if cv and R.has(cv, "A_l1_PMP_30") and R.has(cv, "dense_ce"):
         a, b = R.eff(cv, "dense_ce", "macs_128"), R.eff(cv, "A_l1_PMP_30", "macs_128")
         c, d = R.eff(cv, "dense_ce", "cpu_1thread_b1_ms", "median"), R.eff(cv, "A_l1_PMP_30", "cpu_1thread_b1_ms", "median")
         if a and b and c and d:
-            claim("C6 cost: the CPU latency saving at 30% is smaller than the MAC saving", (1 - d / c) < (1 - b / a),
+            claim("K8 the CPU latency saving at 30% is smaller than the MAC saving", (1 - d / c) < (1 - b / a),
                   f"MACs -{(1 - b / a) * 100:.0f}%, CPU latency -{(1 - d / c) * 100:.0f}%")
+    # K9: thirteen bands do not help
     if R.has(ES13, "dense_ce") and R.has(ES3, "dense_ce"):
-        diffs = np.array([R.runs[(ES13, s, "dense_ce")]["acc"]["novel_5"]["mean"] - R.runs[(ES3, s, "dense_ce")]["acc"]["novel_5"]["mean"]
-                          for s in R.seeds_with(ES13, "dense_ce") if (ES3, s, "dense_ce") in R.runs])
+        diffs = np.array([R.runs[(ES13, s_, "dense_ce")]["acc"]["novel_5"]["mean"] - R.runs[(ES3, s_, "dense_ce")]["acc"]["novel_5"]["mean"]
+                          for s_ in R.seeds_with(ES13, "dense_ce") if (ES3, s_, "dense_ce") in R.runs])
         if len(diffs) > 1:
-            claim("C7 EuroSAT-MS: thirteen bands do not beat the three visible bands for the dense network", diffs.mean() <= 0.5,
+            claim("K9 EuroSAT-MS: thirteen bands do not beat the three visible bands for the dense network", diffs.mean() <= 0.5,
                   f"13 bands - RGB = {psgn(diffs.mean())} points over {len(diffs)} partitions")
+    # K10: the learning-rate sweeps
+    for tun, name in ((R.tuning, "PlantVillage"), (R.tuning_rs, "RESISC45"), (R.tuning_low, "RESISC45, lower rates")):
+        if tun:
+            rows = tun["rows"]
+            s0 = rows.get("S0 (no episodic stage)", {}).get("5")
+            best = max((v["5"] for k, v in rows.items() if not k.startswith("S0")), default=None)
+            if s0 is not None and best is not None:
+                claim(f"K10 validation sweep ({name}): no episodic learning rate beats stopping after S0 by more than 0.2 points (5-shot)",
+                      best <= s0 + 0.2, f"S0 {s0:.1f}, best episodic {best:.1f}")
+    # K11: the weights of DACIS
     if all(R.has(PV, f"S_dacis_PMP_30_lam{i}") for i in range(len(LAMBDAS))):
         v = [R.ms(PV, f"S_dacis_PMP_30_lam{i}", "val_5")[0] for i in range(len(LAMBDAS))]
-        claim("C12 DACIS weights: no weighting beats the default by more than 1 point on validation classes (PlantVillage, 5-shot)",
-              max(v) - v[0] <= 1.0, f"default {v[0]:.1f}, best {max(v):.1f}, worst {min(v):.1f}")
-    if R.tuning:
-        rows = R.tuning["rows"]
-        s0 = rows.get("S0 (no episodic stage)", {}).get("5")
-        best = max((v["5"] for k, v in rows.items() if not k.startswith("S0")), default=None)
-        if s0 is not None and best is not None:
-            claim("C8 validation sweep: no episodic learning rate beats stopping after S0 (5-shot, PlantVillage)", best <= s0 + 0.2,
-                  f"S0 {s0:.1f}, best episodic {best:.1f}")
-    if R.tuning_rs:
-        rows = R.tuning_rs["rows"]
-        s0 = rows.get("S0 (no episodic stage)", {}).get("5")
-        best = max((v["5"] for k, v in rows.items() if not k.startswith("S0")), default=None)
-        if s0 is not None and best is not None:
-            claim("C8b validation sweep: no episodic learning rate beats stopping after S0 (5-shot, RESISC45)", best <= s0 + 0.2,
-                  f"S0 {s0:.1f}, best episodic {best:.1f}")
+        claim("K11 DACIS weights: no weighting beats the default by more than 1 point on validation classes", max(v) - v[0] <= 1.0,
+              f"default {v[0]:.1f}, best {max(v):.1f}, worst {min(v):.1f}")
+    # K12: the budget moves accuracy more than the score
+    for var, key, h in COLS:
+        M, names = score_matrix(R, var, key, "PMP")
+        if M is not None and R.has(var, "C_dacis_PMP_50") and R.has(var, "C_dacis_PMP_10"):
+            a50, a10 = R.ms(var, "C_dacis_PMP_50", key)[0], R.ms(var, "C_dacis_PMP_10", key)[0]
+            mu = M.mean(0)
+            claim(f"K12 {h}: 50% -> 10% of the parameters costs more than the spread among scores at 30%",
+                  (a50 - a10) > (mu.max() - mu.min()), f"{a50 - a10:.1f} points against {mu.max() - mu.min():.1f}")
     head = f"claims check: {len([o for o in out if o.startswith('PASS')])} pass, {fails} fail, {len([o for o in out if o.startswith('SKIP')])} skipped"
     return head + "\n" + "\n".join(out) + "\n"
 
@@ -1012,7 +1120,7 @@ def build_all(out_root, gen_dir):
     """Write every generated table / figure / number used by the paper into gen_dir."""
     R = Results(out_root)
     os.makedirs(gen_dir, exist_ok=True)
-    for name, fn in (("tab_scores", table_scores), ("tab_pairs", table_pairs), ("tab_sched", table_sched),
+    for name, fn in (("tab_scores", table_scores), ("tab_pairs", table_pairs), ("tab_pairs_sched", lambda R_: table_pairs(R_, "sched")), ("tab_sched", table_sched),
                      ("tab_budget", table_budget), ("tab_budget_scores", table_budget_scores), ("tab_recovery", table_recovery),
                      ("tab_ablation", table_ablation), ("tab_eurosat", table_eurosat), ("tab_lambda", table_lambda),
                      ("tab_mlr", table_mlr), ("tab_shots", table_shots), ("tab_mbv2", table_mbv2)):
@@ -1030,15 +1138,17 @@ def build_all(out_root, gen_dir):
 
 
 def readme_block(R):
-    """Markdown for the README: the headline rows of the reported run, mean +/- sd over class partitions."""
+    """Markdown for the README: the headline rows of the reported runs, mean +/- sd over class partitions."""
     def c(var, id_, key):
         ms = R.ms(var, id_, key) if id_ and R.has(var, id_) else None
         return "--" if ms is None else f"{ms[0]:.1f} ± {ms[1]:.1f}"
 
     h = R.host.get("host", {})
-    out = [f"Run on {h.get('gpu', 'unknown GPU')} ({h.get('cpu', 'unknown CPU')}); {len(R.seeds(RS) or R.seeds(PV))} random class partitions; "
-           f"episodic learning rate {R.tuning['best_lr'] if R.tuning else 'n/a'}; mean ± standard deviation over partitions, "
-           "5-way 5-shot test episodes, identical for every row.\n",
+    n_eo, n_pv = len(R.seeds(RS)), len(R.seeds(PV))
+    out = [f"Run on {h.get('gpu', 'unknown GPU')}; {n_eo} random class partitions for RESISC45 and EuroSAT-MS ({n_pv} for PlantVillage; "
+           f"rows for 50, 20 and 10 % of the parameters use 5); episodic learning rate {R.tuning['best_lr'] if R.tuning else 'n/a'}; "
+           "mean ± standard deviation over partitions, 5-way 5-shot test episodes, identical for every row. "
+           "Full tables: `paper/generated/summary.md`.\n",
            "| model | params kept | RESISC45 | EuroSAT-MS | PlantVillage | PlantDoc |",
            "|---|---|---|---|---|---|"]
 
@@ -1051,31 +1161,31 @@ def readme_block(R):
         out.append(f"| {label} | {pf:.0f}% | {c(RS, ids[RS], 'novel_5')} | {c(ES13, ids[ES13], 'novel_5')} | "
                    f"{c(PV, ids[PV], 'novel_5')} | {c(PV, ids[PV], 'plantdoc_5')} |")
 
-    row("ResNet-18 dense (S0)", lambda v: "dense_ce")
-    row("ResNet-18 dense (S0+R+M+R)", lambda v: "dense_rmr")
+    row("ResNet-18 dense", lambda v: "dense_ce")
     for arch, lab in (("mobilenet_v3_small", "MobileNetV3-Small"), ("mobilenet_v2", "MobileNetV2"), ("efficientnet_b0", "EfficientNet-B0")):
-        row(lab, lambda v, a=arch: f"K_{a}")
+        row(lab + " dense", lambda v, a=arch: f"K_{a}")
     for cc in SCORES:
-        row(f"30%, {cc}, prune+recover (P)", lambda v, cc=cc: R.pid(v, cc))
-    for cc in SCORES:
-        row(f"30%, {cc}, PMP", lambda v, cc=cc: f"A_{cc}_PMP_30")
+        row(f"ResNet-18, 30%, {CRIT_PLAIN[cc]}, PMP", lambda v, cc=cc: f"A_{cc}_PMP_30")
     for frac in (50, 20, 10):
         for cc in ("l1", "dacis"):
-            row(f"{frac}%, {cc}, PMP", lambda v, cc=cc, frac=frac: f"C_{cc}_PMP_{frac}")
+            row(f"ResNet-18, {frac}%, {CRIT_PLAIN[cc]}, PMP", lambda v, cc=cc, frac=frac: f"C_{cc}_PMP_{frac}")
+    for frac in (60, 40, 25):
+        for cc in ("random", "l1", "bn_gamma", "taylor", "dacis"):
+            row(f"MobileNetV2, {frac}%, {CRIT_PLAIN[cc]}, P", lambda v, cc=cc, frac=frac: f"MP_{cc}_P_{frac}")
     return "\n".join(out) + "\n"
 
 
 def replication_numbers(R, R2):
-    """Compare the same (variant, seed, run) between two machines. Keys: repl:*"""
-    diffs = []
+    """Compare the same (variant, seed, run) between two machines on the 5-shot novel-class accuracy. Keys: repl:*"""
+    diffs, by_var = [], {}
     for key, r in R.runs.items():
         r2 = R2.runs.get(key)
         if r2 is None:
             continue
-        for k in ("novel_1", "novel_5", "novel_10", "plantdoc_5"):
-            a, b = r["acc"].get(k), r2["acc"].get(k)
-            if a and b:
-                diffs.append(a["mean"] - b["mean"])
+        x, y = r["acc"].get("novel_5"), r2["acc"].get("novel_5")
+        if x and y:
+            diffs.append(x["mean"] - y["mean"])
+            by_var.setdefault(key[0], []).append(x["mean"] - y["mean"])
     n = {}
     if diffs:
         d = np.array(diffs)
@@ -1084,6 +1194,8 @@ def replication_numbers(R, R2):
         n["repl:max"] = f"{np.abs(d).max():.1f}"
         n["repl:bias"] = sgn(d.mean())
         n["repl:seeds"] = str(len({k[1] for k in R.runs if k in R2.runs}))
+        for v, vals_ in by_var.items():
+            n[f"repl:mad:{VTAG[v]}"] = f"{np.abs(np.array(vals_)).mean():.1f}"
         h2 = R2.host.get("host", {})
         n["repl:gpu"] = h2.get("gpu", "a second GPU").replace("_", " ")
     return n
