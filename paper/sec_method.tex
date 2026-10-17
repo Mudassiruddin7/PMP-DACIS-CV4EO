@@ -1,6 +1,9 @@
 \section{Method}
 \label{sec:method}
 
+\paragraph{Notation.}
+S0 is cross-entropy pre-training of the ImageNet-initialised network on the base classes, R the recovery epochs of the same loss after pruning, M episodic (prototypical) meta-training, G the same episodes with the learning rate set to zero (a gradient probe), and P a pruning step. A \emph{mid channel} is an output channel of the first convolution of a residual block, the inner channel that we remove. All methods of one class partition start from the same S0 network.
+
 \paragraph{Episodes and classifier.}
 An episode draws $N{=}5$ classes, $K$ labelled support images and $Q{=}15$ query images per class. We embed an image with the 512-d global-average-pooled output of a ResNet-18, L2-normalise it, average the support embeddings of each class into a prototype, and give each query the label of the most similar prototype under cosine similarity. Base classes are the only classes the network sees, whether for training, for pruning decisions or for the calibration statistics below. Novel classes appear at evaluation and nowhere else.
 
@@ -26,4 +29,23 @@ with weights $(\lambda_G,\lambda_V,\lambda_D)=(0.3,0.2,0.5)$ that we fixed befor
 
 \paragraph{The PMP schedule.}
 We write S0 for supervised cross-entropy training of the ImageNet-initialised network on the base classes, R for the recovery epochs of the same loss (one on PlantVillage, two on the Earth-observation sets), M for episodic training, and P for a pruning step. Figure~\ref{fig:overview} shows the full schedule. After S0, P1 prunes to $60\%$ of the parameters, R recovers, and M runs $1000$ episodes ($5$-way, $5$-shot, $15$ queries) of prototypical training with frozen BatchNorm statistics, in the manner of Meta-Baseline~\cite{chen2021metabaseline}. While M runs we accumulate, for every mid channel, the mean norm of the episode-loss gradient with respect to its filter, $G_{\mathrm{meta}}$. P2 prunes to the target budget with
-$\mathrm{DACIS}_c\,\bigl(1+\gamma\,\mathrm{rk}(G_{\mathrm{meta},c})\bigr)$, $\gamma{=}1$, recomputed on the meta-trained network, and a last R repairs the damage. The alternatives we compare are P (prune once, then R), P$\to$M, M$\to$P and P$\to$M$\to$P$\to$M. Two controls separate what a stage contributes. P$\to$M with twice the episodes tests whether extra stages help only because they train longer. P$\to$G$\to$P replaces M by $200$ episodes with the learning rate set to zero, so the network is untouched and only the gradient statistic $G_{\mathrm{meta}}$ is collected; it asks whether the information in the meta stage is useful without its weight updates. The learning rate of M was chosen on validation classes (Sec.~\ref{sec:results}).
+$\mathrm{DACIS}_c\,\bigl(1+\gamma\,\mathrm{rk}(G_{\mathrm{meta},c})\bigr)$, $\gamma{=}1$, recomputed on the meta-trained network, and a last R repairs the damage. Table~ef{tab:schedules} lists the seven schedules we compare. The alternatives are P (prune once, then R), P$\to$M, M$\to$P and P$\to$M$\to$P$\to$M. Two controls separate what a stage contributes. P$\to$M with twice the episodes tests whether extra stages help only because they train longer. P$\to$G$\to$P replaces M by $200$ episodes with the learning rate set to zero, so the network is untouched and only the gradient statistic $G_{\mathrm{meta}}$ is collected; it asks whether the information in the meta stage is useful without its weight updates. The learning rate of M was chosen on validation classes (Sec.~\ref{sec:results}).
+
+\begin{table}[t]
+  \centering\footnotesize\setlength{\tabcolsep}{4pt}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    Schedule & Steps after S0 \\
+    \midrule
+    P & P(30\%), R \\
+    P$\to$M & P(30\%), R, M \\
+    M$\to$P & M, P(30\%), R \\
+    P$\to$G$\to$P & P(60\%), R, G, P(30\%), R \\
+    PMP & P(60\%), R, M, P(30\%), R \\
+    PMPM & PMP, then M \\
+    P$\to$M, $2\times$ & P(30\%), R, M with twice the episodes \\
+    \bottomrule
+  \end{tabular}
+  \caption{The seven schedules. P(x) prunes to the share x of the parameters; G collects the gradient statistic without updating a weight.}
+  \label{tab:schedules}
+\end{table}

@@ -21,6 +21,10 @@ can be repeated after an interruption and continues where it stopped. Without a 
 profile that only checks the code path; those numbers are not results. It also runs as a plain script:
 `python notebooks/pmp_dacis_cv4eo.py`.
 
+A second notebook, `notebooks/pmp_dacis_cv4eo_ext.py`, adds class partitions 5 to 9 for the RESISC45 and EuroSAT-MS
+comparisons and prunes MobileNetV2 with the same scores (about 1.5 hours on an RTX 6000-class GPU). The paper combines both
+runs: `python tools/finalize.py results.zip --ext results_extension.zip`.
+
 The library lives in `pmp_dacis/` (readable sources; the notebook embeds a copy so that one file is enough).
 `python tests/test_core.py` checks the pruning surgery, the budget solver, the episode sampler, the run cache and the
 dataset variants.

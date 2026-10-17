@@ -12,8 +12,8 @@ import torch.nn as nn
 
 from . import data as D
 from .evaluate import embed, episode_accuracy, host_info, latency_ms, make_episodes, peak_mem_mb
-from .model import count_macs, count_params, make_compact, make_model, prune_model
-from .prune import allocate_mids, calib_indices, collect_stats, criterion_scores, select_keep
+from .model import CompactNet, count_macs, count_params, make_compact, make_model, mbv2_views, prune_model
+from .prune import allocate_linear, allocate_mids, calib_indices, collect_stats, criterion_scores, select_keep
 from .train import train_ce, train_episodic
 
 PROFILES = {
@@ -73,7 +73,7 @@ def log(msg, fh=None):
 
 def ops_for(sched, t, k1):
     return {
-        "compact": [], "dense": [], "dense_m": [("M", 1)], "dense_rmr": [("R",), ("M", 1), ("R",)],
+        "compact": [], "compactR": [("R",)], "dense": [], "dense_m": [("M", 1)], "dense_rmr": [("R",), ("M", 1), ("R",)],
         "P": [("P", t), ("R",)],
         "PM": [("P", t), ("R",), ("M", 1)],
         "PM2x": [("P", t), ("R",), ("M", 2)],
@@ -169,6 +169,22 @@ class Ctx:
         log(f"  [{self.variant} s{self.seed}] dense S0: {lg['steps']} steps, {lg['seconds']:.0f}s, loss {lg['loss']:.3f}", self.fh)
         return m, lg
 
+    def dense_arch(self, arch):
+        """Cached S0 network of an off-the-shelf architecture (the starting point of its pruning runs)."""
+        path = os.path.join(self.dir, f"cache_dense_{arch}_s0_{self.h_s0}.pt")
+        m = make_compact(arch, self.ds.in_ch).to(self.device)
+        if os.path.exists(path):
+            ck = torch.load(path, map_location=self.device)
+            m.fc = nn.Linear(m.feat_dim, ck["n_fc"]).to(self.device)
+            m.load_state_dict(ck["sd"])
+            return m
+        torch.manual_seed(self.seed)
+        lg = train_ce(m, self.ds, self.base, self.e0, self.cfg["s0_lr"], self.device, self._rng("s0_" + arch),
+                      bs=self.cfg["bs"], amp=self.cfg["amp"], new_head=True)
+        torch.save({"sd": m.state_dict(), "n_fc": len(self.base), "log": lg}, path)
+        log(f"  [{self.variant} s{self.seed}] {arch} S0: {lg['steps']} steps, {lg['seconds']:.0f}s, loss {lg['loss']:.3f}", self.fh)
+        return m
+
     def dense_m(self):
         path = os.path.join(self.dir, f"cache_dense_m_{self.h_all}.pt")
         m, _ = self.dense()
@@ -228,14 +244,23 @@ def tune_m_lr(cfg, device, datasets, out_root, fh=None, variant="plantvillage"):
 def _stage_prune(ctx, model, spec, frac, state, rng):
     cfg = ctx.cfg
     idx, lab = calib_indices(ctx.ds, ctx.base, cfg["calib_per_class"], ctx._rng("calib"))
-    stats = collect_stats(model, ctx.ds, idx, lab, ctx.device)
+    compact = isinstance(model, CompactNet)
+    if compact:
+        with mbv2_views(model) as views:
+            stats = collect_stats(model, ctx.ds, idx, lab, ctx.device, blocks=views)
+    else:
+        stats = collect_stats(model, ctx.ds, idx, lab, ctx.device)
     lam = spec.get("lambdas", cfg["lambdas"])
     scfg = {"lambda_g": lam[0], "lambda_v": lam[1], "lambda_d": lam[2]}
     gm = state.get("gmeta")
     use_refine = spec["crit"] == "dacis" and spec.get("refine", True) and gm is not None
     scores = criterion_scores(spec["crit"], stats, scfg, rng, gmeta=gm, norm=spec.get("norm", "rank"),
                               refine_gamma=cfg["gamma"] if use_refine else 0.0)
-    mids = allocate_mids(model, frac, ctx.dense_params, tilt=spec.get("tilt", cfg["tilt"]), caps=model.mids())
+    if compact:
+        coefs, cur, full = model.mid_spec()
+        mids = allocate_linear(coefs, cur, full, count_params(model), state["dense_params"], frac, tilt=spec.get("tilt", cfg["tilt"]))
+    else:
+        mids = allocate_mids(model, frac, ctx.dense_params, tilt=spec.get("tilt", cfg["tilt"]), caps=model.mids())
     keep = select_keep(scores, mids)
     new = prune_model(model, keep)
     state["stages"].append({"op": "P", "frac": frac, "mids": mids, "params": count_params(new),
@@ -313,6 +338,9 @@ def run_spec(ctx, spec):
         lg = train_ce(model, ctx.ds, ctx.base, ctx.e0, cfg["s0_lr"], ctx.device, rng, bs=cfg["bs"], amp=cfg["amp"], new_head=True)
         state["stages"].append({"op": "S0", "epochs": ctx.e0, **{k: lg[k] for k in ("steps", "images", "seconds", "loss")}})
         ops = [("R",)]
+    elif spec.get("prune_arch"):                          # compact network: cached S0, then prune / recover as for the ResNet
+        model = ctx.dense_arch(spec["prune_arch"])
+        state["dense_params"] = count_params(model)
     elif spec["sched"] in ("MP", "dense_m"):
         model, gm, lg = ctx.dense_m()
         state["gmeta"] = gm
@@ -346,7 +374,7 @@ def run_spec(ctx, spec):
     eff = _efficiency(ctx, model, spec)
     rec = {"spec": spec, "variant": ctx.variant, "seed": ctx.seed, "run_hash": key,
            "split": {"base": ctx.base, "val": ctx.val, "novel": ctx.novel},
-           "acc": acc, "eff": eff, "param_frac": eff["params"] / ctx.dense_params, "mids": model.mids(),
+           "acc": acc, "eff": eff, "param_frac": eff["params"] / (state.get("dense_params") or ctx.dense_params), "mids": model.mids(),
            "stages": state["stages"], "train_seconds_after_s0": train_s, "train_images_after_s0": train_img,
            "wall_seconds": time.time() - t0}
     np.savez_compressed(os.path.join(ctx.dir, f"{spec['id']}.npz"), **arrs)
@@ -412,7 +440,25 @@ def grid_for(variant):
                 L.append(_spec(f"C_{c}_PMP_{int(round(t * 100))}", "PMP", c, t, 2))
         for arch in ("mobilenet_v3_small", "mobilenet_v2", "efficientnet_b0"):
             L.append(_spec(f"K_{arch}", "compact", "-", 1.0, 2, arch=arch, bench=True))
+    for c in ("random", "l1", "bn_gamma", "taylor", "dacis"):      # MobileNetV2 pruned like the ResNet: tier 4
+        for t in (0.6, 0.4, 0.25):
+            L.append(_spec(f"MP_{c}_P_{int(round(t * 100))}", "P", c, t, 4, prune_arch="mobilenet_v2", bench=c in ("l1", "dacis")))
+    L.append(_spec("MK_mobilenet_v2_dense", "compactR", "-", 1.0, 4, prune_arch="mobilenet_v2", bench=True))
     return L
+
+
+# the extension run: more class partitions for the Earth-observation comparisons, and the pruned MobileNetV2 on ten
+EXT_EXTRA = ("A_bn_gamma_PMP_30", "A_G_PMP_30", "A_V_PMP_30")
+
+
+def ext_jobs(variants=("resisc45", "eurosat13"), new_seeds=(5, 6, 7, 8, 9), all_seeds=tuple(range(10))):
+    jobs = []
+    for v in variants:
+        g = grid_for(v)
+        main = [s for s in g if s["tier"] == 1 or s["id"] in EXT_EXTRA or s["id"].startswith("K_")]
+        jobs.append((v, main, list(new_seeds)))
+        jobs.append((v, [s for s in g if s["tier"] == 4], list(all_seeds)))
+    return jobs
 
 
 def load_datasets(data_root, cache_dir, cfg, which=("plantvillage", "plantdoc", "eurosat", "resisc45")):
@@ -432,7 +478,7 @@ def load_datasets(data_root, cache_dir, cfg, which=("plantvillage", "plantdoc", 
 
 
 def run_all(cfg, device, data_root, cache_dir, out_root, variants=("resisc45", "eurosat13", "eurosat3", "plantvillage"),
-            tiers=(1, 2, 3), fh=None):
+            tiers=(1, 2, 3), fh=None, jobs=None):
     cfg = dict(cfg)
     which = ["plantvillage", "plantdoc"] if "plantvillage" in variants else []
     if any(v.startswith("eurosat") for v in variants):
@@ -445,17 +491,22 @@ def run_all(cfg, device, data_root, cache_dir, out_root, variants=("resisc45", "
     if cfg["m_lr"] == "auto":
         cfg["m_lr"] = tune_m_lr(cfg, device, datasets, out_root, fh)
     log(f"episodic learning rate in use: {cfg['m_lr']:g}", fh)
-    if "resisc45" in variants and len(cfg.get("m_lr_grid", [])) > 1:      # same sweep on aerial-scene validation classes, for the record
+    if jobs is None and "resisc45" in variants and len(cfg.get("m_lr_grid", [])) > 1:      # same sweep on aerial-scene validation classes, for the record
         tune_m_lr(cfg, device, datasets, out_root, fh, variant="resisc45")
     failures = []
-    for tier in tiers:
-        for variant in variants:
-            grid = [s for s in grid_for(variant) if s["tier"] == tier]
-            if variant == "eurosat3":
-                grid = [s for s in grid if s["id"] in ("dense_ce", "dense_m", "dense_rmr", "A_l1_PMP_30", "A_dacis_PMP_30", "K_mobilenet_v3_small")]
+    if jobs is None:
+        jobs = []
+        for tier in tiers:
+            for variant in variants:
+                grid = [s for s in grid_for(variant) if s["tier"] == tier]
+                if variant == "eurosat3":
+                    grid = [s for s in grid if s["id"] in ("dense_ce", "dense_m", "dense_rmr", "A_l1_PMP_30", "A_dacis_PMP_30", "K_mobilenet_v3_small")]
+                jobs.append((variant, grid, cfg["seeds"]))
+    for variant, grid, seeds in jobs:
+        if True:
             if cfg.get("max_specs"):                      # smoke profile: only check that the code path runs
                 grid = grid[: cfg["max_specs"]]
-            for seed in cfg["seeds"]:
+            for seed in seeds:
                 ctx = Ctx(variant, seed, cfg, device, datasets, out_root, fh)
                 ctx.dense()
                 for spec in grid:
