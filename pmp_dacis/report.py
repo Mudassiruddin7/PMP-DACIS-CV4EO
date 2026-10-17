@@ -805,7 +805,7 @@ def numbers(R):
         n["bands:d"], n["bands:lo"], n["bands:hi"] = sgn(dd.mean()), sgn(dd.mean() - hw), sgn(dd.mean() + hw)
         n["bands:abs"] = f"{abs(dd.mean()):.1f}"
         n["bands:pos"] = str(int((dd > 0).sum()))
-    # share of the dense accuracy that a pruned network keeps (PlantVillage, the data of the earlier preprint)
+    # share of the dense accuracy that a pruned network keeps (PlantVillage)
     dpv = R.ms(PV, "dense_ce", "novel_5")
     for tag, rid in (("dacis20", "C_dacis_PMP_20"), ("dacis30", "A_dacis_PMP_30"), ("random30", "A_random_PMP_30"), ("taylor30", "A_taylor_PMP_30")):
         m_ = R.ms(PV, rid, "novel_5") if R.has(PV, rid) else None

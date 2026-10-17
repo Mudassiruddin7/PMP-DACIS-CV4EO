@@ -11,16 +11,23 @@
     cut/.style={draw=red!70!black, fill=white, dash pattern=on 1pt off 0.8pt, line width=0.35pt}
 ]
   % ---- (a) one scene through the pruned network -------------------------------------------------------
-  \node[anchor=west, font=\footnotesize\bfseries] at (-0.7,1.25) {(a) A scene becomes a label};
-  \begin{scope}                                                    % a small aerial scene
-    \fill[green!35] (-0.6,-0.6) rectangle (0,0);
-    \fill[yellow!45] (0,-0.6) rectangle (0.6,0.1);
-    \fill[green!55!black!45] (-0.6,0) rectangle (-0.1,0.6);
-    \fill[brown!35] (-0.1,0.1) rectangle (0.6,0.6);
-    \draw[gray, line width=1.4pt] (-0.6,-0.25) -- (0.6,0.35);
+  \node[anchor=west, font=\footnotesize\bfseries] at (-0.7,1.25) {(a) An image becomes a label};
+  \begin{scope}                                                    % a leaf photograph
+    \fill[green!6] (-0.6,-0.6) rectangle (0.6,0.6);
+    \draw[green!35!black, line width=0.9pt] (0.03,-0.58) -- (0.03,-0.36);
+    \path[fill=green!55!black!75, draw=green!25!black, line width=0.5pt] (0.03,-0.36) .. controls (-0.66,-0.2) and (-0.5,0.4) .. (0.03,0.52)
+      .. controls (0.56,0.4) and (0.72,-0.2) .. (0.03,-0.36) -- cycle;
+    \draw[green!10!white, line width=0.5pt] (0.03,-0.34) -- (0.03,0.46);
+    \foreach \y in {-0.18,0.04,0.26} {
+      \draw[green!10!white, line width=0.35pt] (0.03,\y) -- (0.3,{\y+0.16});
+      \draw[green!10!white, line width=0.35pt] (0.03,\y) -- (-0.24,{\y+0.16});
+    }
+    \fill[brown!60!black] (0.2,-0.08) circle (0.045);
+    \fill[brown!60!black] (-0.17,0.12) circle (0.055);
+    \fill[yellow!60!brown] (0.14,0.28) circle (0.035);
     \draw[line width=0.5pt] (-0.6,-0.6) rectangle (0.6,0.6);
   \end{scope}
-  \node[align=center, font=\scriptsize] at (0,-1.05) {scene (RGB or\\13 Sentinel-2 bands)};
+  \node[align=center, font=\scriptsize] at (0,-1.1) {input image (leaf photo,\\aerial scene or\\13-band patch)};
   \foreach \cx/\pat in {2.3/{0/1,1/1,2/1,3/0,4/1,5/1}, 3.6/{0/1,1/0,2/1,3/1,4/0,5/1}, 4.9/{0/0,1/1,2/0,3/1,4/0,5/1}, 6.2/{0/0,1/0,2/1,3/0,4/0,5/1}} {
     \draw[rounded corners=1.5pt, fill=white, line width=0.5pt] (\cx-0.5,-0.62) rectangle (\cx+0.5,0.62);
     \foreach \j/\k in \pat {

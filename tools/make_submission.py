@@ -119,8 +119,8 @@ def main(out):
    the WACV style file requires one of its track options in review mode (paper/paper_review.tex), so it stays unless the
    workshop asks for something else.
 5. Do not upload `paper_authors.pdf` to OpenReview: it names the authors. The raw result zips stay outside this folder.
-7. The first arXiv version of the method (2601.02353) still carries numbers that this study could not reproduce. The review PDF
-   cites it anonymously as an earlier preprint. Consider posting a corrected version.
+7. The paper does not cite the arXiv preprint 2601.02353 that introduced DACIS and PMP, and that preprint's numbers do not
+   reproduce under this protocol. A reviewer who finds it may ask about the overlap; consider posting a corrected version.
 8. Camera-ready is due Nov 20, 2026 (WACV format, authors visible): rebuild with `paper/paper_final.tex`.
 """)
     print("wrote", out)

@@ -3,7 +3,7 @@
     python tools/build_notebook.py
 
 `build_text(anonymous=True)` returns the same notebook without the files that name the authors (author block, the
-bibliography with the authors of the earlier preprint, the author-version wrapper). The anonymous supplementary
+author-naming bibliography, the author-version wrapper). The anonymous supplementary
 material of the double-blind submission is built from it.
 """
 import base64

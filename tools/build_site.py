@@ -37,7 +37,7 @@ def main(out):
     rev = os.path.join(ROOT, "paper", "final", "paper_review.pdf")
     d = fitz.open(rev)
     for i, pg in enumerate(d):
-        a = pg.search_for("(a) A scene becomes a label")
+        a = pg.search_for("(a) An image becomes a label")
         c = pg.search_for("Figure 1.")
         if a and c:
             clip = fitz.Rect(70, a[0].y0 - 6, pg.rect.width - 70, c[0].y0 - 3)
@@ -74,14 +74,14 @@ footer{{color:var(--mut);font-size:14px;margin-top:48px;border-top:1px solid var
 <div class="cards">
  <div class="card"><div class="big good">+{n('d:rs:novel_5:taylor-random:PMP:abs')}</div><div class="lbl">points: Taylor over random channel choice, ResNet-18 at 30% of the parameters, RESISC45 (survives correction for 28 comparisons)</div></div>
  <div class="card"><div class="big good">+{n('d:rs:novel_5:mp-taylor-random:25:abs')}</div><div class="lbl">points: Taylor over random choice on a MobileNetV2 kept at 25%; BatchNorm scale is {n('d:rs:novel_5:mp-bn_gamma-random:25:abs')} points below random</div></div>
- <div class="card"><div class="big flat">0</div><div class="lbl">DACIS (the score of the earlier preprint) cannot be told from random choice in any of the eight setting and schedule pairs</div></div>
+ <div class="card"><div class="big flat">0</div><div class="lbl">DACIS (a rank-sum score) cannot be told from random choice in any of the eight setting and schedule pairs</div></div>
  <div class="card"><div class="big">{n('cost:macs-red:30')}% &rarr; {n('cost:cpu-red:30')}%</div><div class="lbl">fewer multiply-accumulates at 30% of the parameters, but only this much lower CPU latency</div></div>
  <div class="card"><div class="big good">{n('resisc45:K_mobilenet_v3_small:novel_5') if 'resisc45:K_mobilenet_v3_small:novel_5' in N else '88.1'}%</div><div class="lbl">5-shot accuracy of an unpruned MobileNetV3-Small on RESISC45 at {n('cost:mobilenet_v3_small:macs')} G multiply-accumulates: it beats every pruned network we built</div></div>
 </div>
 
-<h2>How a scene becomes a label</h2>
-<p>A pretrained trunk (ResNet-18 or MobileNetV2) has its inner channels scored and the lowest scorers removed under one shared depth profile. A scene is embedded, normalised, and given the label of the nearest class prototype, the mean embedding of the few labelled support scenes. The PMP schedule below the pipeline is the three-stage prune, meta-train, prune recipe that we re-test.</p>
-<figure><img src="fig_pipeline.png" alt="Pipeline: a scene goes through the pruned trunk, is pooled into an embedding and labelled by cosine similarity to class prototypes; below, the PMP schedule."><figcaption>Figure 1. A scene becomes a label through a pruned trunk and a nearest-prototype head (a); the PMP schedule (b).</figcaption></figure>
+<h2>How an image becomes a label</h2>
+<p>A pretrained trunk (ResNet-18 or MobileNetV2) has its inner channels scored and the lowest scorers removed under one shared depth profile. An image is embedded, normalised, and given the label of the nearest class prototype, the mean embedding of the few labelled support scenes. The PMP schedule below the pipeline is the three-stage prune, meta-train, prune recipe that we re-test.</p>
+<figure><img src="fig_pipeline.png" alt="Pipeline: an image goes through the pruned trunk, is pooled into an embedding and labelled by cosine similarity to class prototypes; below, the PMP schedule."><figcaption>Figure 1. An image becomes a label through a pruned trunk and a nearest-prototype head (a); the PMP schedule (b).</figcaption></figure>
 
 <h2>Which scores beat random choice?</h2>
 <p>Only the Taylor score does. Each dot is the paired difference to random choice in 5-shot points, with a 95% interval over class partitions; the dashed zero line is random choice. The gap grows with the severity of pruning.</p>
@@ -95,7 +95,7 @@ footer{{color:var(--mut);font-size:14px;margin-top:48px;border-top:1px solid var
 <ul>
 <li>Test a small ImageNet-initialised network such as MobileNetV3-Small before pruning anything.</li>
 <li>If a network must be pruned, use the Taylor term, skip the meta stage, and report many class partitions with paired episodes.</li>
-<li>The meta-training stage of the earlier schedule did not raise 5-shot accuracy; schedules that gain are those whose score uses the meta-gradient statistic, and a variant that updates no weight gains as much.</li>
+<li>The meta-training stage of the PMP schedule did not raise 5-shot accuracy; schedules that gain are those whose score uses the meta-gradient statistic, and a variant that updates no weight gains as much.</li>
 <li>Not tested: coordinates, dates, radar, full scenes, satellite-pretrained backbones and embedded hardware.</li>
 </ul>
 
