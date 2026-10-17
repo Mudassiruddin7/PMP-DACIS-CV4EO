@@ -1,3 +1,6 @@
+% Times-like text font with real bold and italic shapes (the template's own Times shapes are undefined in this TeX engine)
+\usepackage{fontspec}
+\setmainfont{texgyretermes}[Extension=.otf,UprightFont=*-regular,BoldFont=*-bold,ItalicFont=*-italic,BoldItalicFont=*-bolditalic]
 % Extra packages. wacv.sty already loads times, xcolor, graphicx, amsmath, amssymb, booktabs, natbib,
 % caption, subcaption, cleveref, enumitem, lineno (review mode) and url.
 \usepackage{multirow}
@@ -22,3 +25,4 @@
 
 % small helper for pm values in running text
 \newcommand{\pmv}[2]{$#1\pm#2$}
+\newcommand{\key}[1]{\textbf{#1}}

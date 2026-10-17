@@ -67,7 +67,7 @@ def main(out):
         z.writestr(zipfile.ZipInfo("pmp_dacis_code/notebooks/pmp_dacis_cv4eo_ext.py", (2025, 1, 1, 0, 0, 0)),
                    build_notebook.build_ext_text())
         readme = "\n".join([
-            "Code for the submission 'Benchmarking Channel Pruning for Few-Shot Earth Observation'.",
+            "Code for the submission 'Which Channels to Keep? Pruning for Few-Shot Earth Observation'.",
             "",
             "notebooks/pmp_dacis_cv4eo.py   single-file marimo notebook: press Run all on a GPU machine (about two hours on an",
             "                               RTX 6000-class GPU); it downloads four public datasets from the Hugging Face Hub,",
