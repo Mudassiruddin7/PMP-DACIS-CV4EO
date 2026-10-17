@@ -54,6 +54,8 @@ partitions with the sample standard deviation as a subscript; brackets give a 95
 \input{generated/tab_eurosat}
 \caption{EuroSAT-MS with 13 bands against the three visible bands.}
 \end{table}
+\begin{figure*}[t]\centering\includegraphics[width=\textwidth]{generated/fig_budget.pdf}
+\caption{5-shot accuracy against the share of parameters kept for four scores (schedule PMP); error bars are the standard error over partitions; dashed: dense network.}\end{figure*}
 \begin{figure}[t]\centering\IfFileExists{generated/fig_overlap.pdf}{\includegraphics[width=\columnwidth]{generated/fig_overlap.pdf}}{}
 \caption{Overlap (Jaccard) of the channels kept by the first pruning step of different scores (RESISC45 if available, else PlantVillage).}
 \end{figure}

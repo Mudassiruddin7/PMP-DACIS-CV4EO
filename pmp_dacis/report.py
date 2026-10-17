@@ -116,7 +116,8 @@ class Results:
         n = len(d)
         sd = float(d.std(ddof=1))
         half = float(sps.t.ppf(0.975, n - 1) * sd / np.sqrt(n))
-        return {"mean": float(d.mean()), "lo": float(d.mean() - half), "hi": float(d.mean() + half), "sd": sd,
+        pval = float(2 * sps.t.sf(abs(d.mean()) / (sd / np.sqrt(n)), n - 1)) if sd > 0 else 1.0
+        return {"mean": float(d.mean()), "lo": float(d.mean() - half), "hi": float(d.mean() + half), "sd": sd, "p": pval,
                 "per_seed": d.tolist(), "wins": int((d > 0).sum()), "n": n}
 
     def cost_variant(self):
@@ -451,15 +452,16 @@ def make_figures(R, outdir):
                            for c in order])
             if np.all(np.isnan(ys)):
                 continue
-            ax.plot(range(len(order)), ys - np.nanmean(ys), marker=seed_marks[si % len(seed_marks)], ms=3, lw=0.8,
-                    color=seed_cols[si % len(seed_cols)], label=f"partition {s}")
+            ax.plot(np.arange(len(order)) + (si - 2) * 0.1, ys - np.nanmean(ys), ls="none", marker=seed_marks[si % len(seed_marks)],
+                    ms=3.2, color=seed_cols[si % len(seed_cols)], label=f"partition {s}")
         ax.axhline(0, color="#999", lw=0.6)
         ax.set_xticks(range(len(order)))
         ax.set_xticklabels([short[c] for c in order], rotation=45)
         ax.set_title(title)
     axs[0].set_ylabel("Accuracy minus score mean (pts)")
-    axs[0].legend(frameon=False, ncol=1, loc="lower left", fontsize=5.5)
-    fig.tight_layout(pad=0.4)
+    hd, lb = axs[0].get_legend_handles_labels()
+    fig.legend(hd, lb, loc="upper center", ncol=len(lb), frameon=False, fontsize=6, bbox_to_anchor=(0.5, 1.02))
+    fig.tight_layout(pad=0.4, rect=(0, 0, 1, 0.93))
     fig.savefig(os.path.join(outdir, "fig_seeds.pdf"))
     plt.close(fig)
     # (2) accuracy versus parameter budget
@@ -489,6 +491,37 @@ def make_figures(R, outdir):
     axs[0].legend(loc="lower right", frameon=False, fontsize=5.5)
     fig.tight_layout(pad=0.4)
     fig.savefig(os.path.join(outdir, "fig_budget.pdf"))
+    plt.close(fig)
+    # (2b) accuracy against cost: the compact networks sit up and to the left of every pruned ResNet-18
+    sets = [(v, k, h) for v, k, h in panels if k == "novel_5"]
+    fig, axs = plt.subplots(1, len(sets), figsize=(6.9, 2.0), squeeze=False)
+    for ax, (var, key, title) in zip(axs[0], sets):
+        def pt(id_):
+            if not R.has(var, id_):
+                return None
+            m = R.eff(var, id_, "macs_res")
+            return None if m is None else (m / 1e9, R.ms(var, id_, key)[0])
+        dense = pt("dense_ce")
+        if dense:
+            ax.plot(*dense, marker="*", ms=8, ls="none", color="#333", label="ResNet-18, dense")
+        pr = [pt("A_dacis_PMP_30" if f == 30 else f"C_dacis_PMP_{f}") for f in (50, 30, 20, 10)]
+        pr = [q for q in pr if q]
+        if pr:
+            ax.plot([q[0] for q in pr], [q[1] for q in pr], marker="o", ms=3.5, lw=1.0, color="#eb6834", label="ResNet-18 pruned (DACIS, 50/30/20/10%)")
+        for arch, lab, mk2, c in (("mobilenet_v3_small", "MobileNetV3-S", "s", "#2a78d6"), ("mobilenet_v2", "MobileNetV2", "^", "#1baf7a"),
+                                  ("efficientnet_b0", "EfficientNet-B0", "D", "#6250d6")):
+            q = pt(f"K_{arch}")
+            if q:
+                ax.plot(*q, marker=mk2, ms=4.5, ls="none", color=c, label=lab)
+        ax.set_xscale("log")
+        ax.set_title(title)
+        ax.set_xlabel("Multiply-accumulates (G)")
+        ax.grid(alpha=0.25, lw=0.4)
+    axs[0][0].set_ylabel("5-shot accuracy (%)")
+    hd, lb = axs[0][0].get_legend_handles_labels()
+    fig.legend(hd, lb, loc="upper center", ncol=len(lb), frameon=False, fontsize=6, bbox_to_anchor=(0.5, 1.03))
+    fig.tight_layout(pad=0.4, rect=(0, 0, 1, 0.9))
+    fig.savefig(os.path.join(outdir, "fig_tradeoff.pdf"))
     plt.close(fig)
     # (3) resolution sweep (trained at one resolution, tested at others)
     rv = next((v for v in (RS, PV) if R.has(v, "A_dacis_PMP_30") and
@@ -661,7 +694,7 @@ def numbers(R):
     # all paired comparisons "computed score minus random selection" at 30%: how many favour either side
     for sched in ("PMP", "P"):
         tot = above = below = 0
-        blist, alist, gains = [], [], []
+        blist, alist, gains, pvals, halfw, pabove = [], [], [], [], [], []
         for var, key, h in COLS:
             best = None
             for c in ("l1", "bn_gamma", "taylor", "G", "V", "D", "dacis"):
@@ -672,6 +705,10 @@ def numbers(R):
                     continue
                 tot += 1
                 gains.append(pp["mean"])
+                pvals.append(pp["p"])
+                if pp["mean"] > 0:
+                    pabove.append(pp["p"])
+                halfw.append((pp["hi"] - pp["lo"]) / 2)
                 if best is None or pp["mean"] > best[1]["mean"]:
                     best = (c, pp)
                 if pp["lo"] > 0:
@@ -693,6 +730,10 @@ def numbers(R):
             n[f"cmp:belowlist:{sched}"] = "; ".join(blist) if blist else "none"
             n[f"cmp:chance:{sched}"] = f"{tot * 0.05:.1f}"                # intervals expected to exclude zero if nothing differed
             n[f"cmp:maxgain:{sched}"] = f"{max(gains):.1f}"
+            n[f"cmp:bonf:{sched}"] = f"{min(1.0, min(pvals) * tot):.2f}"      # smallest p value after Bonferroni correction
+            n[f"cmp:bonfabove:{sched}"] = f"{min(1.0, min(pabove) * tot):.2f}" if pabove else "1.00"
+            n[f"cmp:halfw:{sched}"] = f"{np.mean(halfw):.1f}"
+            n[f"cmp:halfwmax:{sched}"] = f"{max(halfw):.1f}"
     ks = [float(n[k]) for k in n if k.startswith("kw:") and k.endswith(":PMP")]
     if ks:
         n["kw:max"] = f"{max(ks):.2f}"
@@ -727,7 +768,8 @@ def numbers(R):
             n[f"tune-rs:{k}:5"] = f"{v['5']:.1f}"
     h = R.host.get("host", {})
     n["hw-gpu"] = h.get("gpu", "an unnamed GPU").replace("_", " ")
-    n["hw-cpu"] = h.get("cpu", "an unnamed CPU")
+    cpu = h.get("cpu", "")
+    n["hw-cpu"] = cpu if cpu and cpu.lower() != "unknown" else f"a {h.get('cpu_count', '?')}-thread server CPU (model not reported by the host)"
     n["hw-gpumem"] = str(h.get("gpu_mem_gb", ""))
     return n
 

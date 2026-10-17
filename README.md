@@ -44,8 +44,37 @@ dataset variants.
 ## Results
 
 <!-- RESULTS:BEGIN -->
-The numbers of the reported run are added here, generated from `results/` by `pmp_dacis/report.py` (no number in this
-repository is typed by hand).
+Run on NVIDIA RTX PRO 6000 Blackwell Server Edition (unknown); 5 random class partitions; episodic learning rate 0.0001; mean ± standard deviation over partitions, 5-way 5-shot test episodes, identical for every row.
+
+| model | params kept | RESISC45 | EuroSAT-MS | PlantVillage | PlantDoc |
+|---|---|---|---|---|---|
+| ResNet-18 dense (S0) | 100% | 86.9 ± 3.4 | 62.1 ± 5.3 | 91.4 ± 5.6 | 55.4 ± 1.3 |
+| ResNet-18 dense (S0+R+M+R) | 100% | 86.7 ± 3.3 | 61.7 ± 5.1 | 91.3 ± 5.6 | 55.5 ± 1.1 |
+| MobileNetV3-Small | 8% | 88.1 ± 3.3 | 72.4 ± 4.9 | 91.1 ± 5.9 | 50.0 ± 0.8 |
+| MobileNetV2 | 20% | 86.9 ± 3.1 | 65.4 ± 3.5 | 91.2 ± 6.3 | 55.1 ± 1.0 |
+| EfficientNet-B0 | 36% | 90.5 ± 2.4 | 69.9 ± 5.1 | 93.8 ± 5.2 | 58.5 ± 0.4 |
+| 30%, random, prune+recover (P) | 30% | 79.7 ± 4.9 | 55.6 ± 6.4 | 85.6 ± 8.1 | 46.6 ± 1.3 |
+| 30%, l1, prune+recover (P) | 30% | 80.5 ± 4.5 | 56.2 ± 7.9 | 85.8 ± 8.3 | 48.7 ± 0.9 |
+| 30%, bn_gamma, prune+recover (P) | 30% | -- | -- | 85.1 ± 8.9 | 44.4 ± 1.7 |
+| 30%, taylor, prune+recover (P) | 30% | 82.2 ± 3.9 | 58.1 ± 6.6 | 88.3 ± 7.1 | 47.9 ± 1.2 |
+| 30%, G, prune+recover (P) | 30% | -- | -- | 87.3 ± 7.2 | 47.6 ± 1.5 |
+| 30%, V, prune+recover (P) | 30% | -- | -- | 86.5 ± 6.9 | 47.2 ± 1.4 |
+| 30%, D, prune+recover (P) | 30% | 79.3 ± 4.1 | 55.8 ± 6.9 | 85.2 ± 8.9 | 46.8 ± 0.8 |
+| 30%, dacis, prune+recover (P) | 30% | 79.7 ± 4.1 | 56.3 ± 6.7 | 86.4 ± 7.7 | 47.3 ± 1.4 |
+| 30%, random, PMP | 30% | 81.0 ± 4.2 | 57.6 ± 6.0 | 86.8 ± 7.7 | 46.7 ± 1.7 |
+| 30%, l1, PMP | 30% | 81.0 ± 4.2 | 57.0 ± 6.0 | 86.4 ± 7.7 | 48.1 ± 0.8 |
+| 30%, bn_gamma, PMP | 30% | 79.7 ± 4.2 | 55.0 ± 6.1 | 85.1 ± 8.7 | 45.5 ± 1.0 |
+| 30%, taylor, PMP | 30% | 82.2 ± 3.9 | 57.0 ± 8.0 | 87.1 ± 7.1 | 48.5 ± 1.0 |
+| 30%, G, PMP | 30% | 81.0 ± 4.5 | 56.4 ± 6.5 | 86.7 ± 7.9 | 46.9 ± 2.5 |
+| 30%, V, PMP | 30% | 81.0 ± 4.0 | 56.5 ± 5.2 | 86.5 ± 7.3 | 47.3 ± 1.3 |
+| 30%, D, PMP | 30% | 79.5 ± 3.9 | 56.0 ± 7.5 | 85.3 ± 8.0 | 46.4 ± 1.3 |
+| 30%, dacis, PMP | 30% | 80.5 ± 4.2 | 57.1 ± 4.9 | 86.6 ± 7.5 | 47.5 ± 1.6 |
+| 50%, l1, PMP | 50% | 84.1 ± 3.7 | 60.1 ± 4.4 | 89.0 ± 7.1 | 51.3 ± 1.1 |
+| 50%, dacis, PMP | 50% | 83.8 ± 3.7 | 58.6 ± 5.7 | 88.6 ± 7.2 | 51.6 ± 1.4 |
+| 20%, l1, PMP | 20% | 79.4 ± 4.4 | 54.6 ± 8.7 | 84.2 ± 8.3 | 45.3 ± 1.0 |
+| 20%, dacis, PMP | 20% | 77.4 ± 4.9 | 54.5 ± 8.1 | 83.8 ± 8.2 | 44.1 ± 2.0 |
+| 10%, l1, PMP | 10% | 70.8 ± 5.5 | 50.9 ± 10.4 | 79.3 ± 9.9 | 39.1 ± 1.1 |
+| 10%, dacis, PMP | 10% | 71.9 ± 4.8 | 51.4 ± 7.5 | 78.2 ± 10.2 | 40.5 ± 1.1 |
 <!-- RESULTS:END -->
 
 ## About earlier numbers

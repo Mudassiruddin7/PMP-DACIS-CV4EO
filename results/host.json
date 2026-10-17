@@ -1,0 +1,79 @@
+{
+ "profile": "paper",
+ "host": {
+  "python": "3.13.11",
+  "torch": "2.11.0+cu130",
+  "platform": "Linux-4.19.0-gvisor-x86_64-with-glibc2.41",
+  "cpu_count": 20,
+  "device": "cuda",
+  "cpu": "unknown",
+  "gpu": "NVIDIA RTX PRO 6000 Blackwell Server Edition",
+  "gpu_mem_gb": 95.0,
+  "cuda": "13.0",
+  "ram_gb": 160.0
+ },
+ "cfg": {
+  "seeds": [
+   0,
+   1,
+   2,
+   3,
+   4
+  ],
+  "pv_res": 128,
+  "es_res": 64,
+  "n_base": 24,
+  "n_val": 6,
+  "s0_epochs": 6,
+  "s0_lr": 0.02,
+  "r_epochs": 1,
+  "r_lr": 0.01,
+  "m_episodes": 1000,
+  "m_lr": "auto",
+  "m_lr_grid": [
+   0.0001,
+   0.00025,
+   0.0005,
+   0.001,
+   0.002
+  ],
+  "probe_episodes": 200,
+  "eval_episodes": 2000,
+  "shots": [
+   1,
+   5,
+   10
+  ],
+  "query": 15,
+  "way": 5,
+  "bs": 128,
+  "calib_per_class": 40,
+  "tilt": 0.5,
+  "k1": 0.6,
+  "gamma": 1.0,
+  "lambdas": [
+   0.3,
+   0.2,
+   0.5
+  ],
+  "es_s0_epochs": 8,
+  "es_r_epochs": 2,
+  "es_m_episodes": 800,
+  "es_n_base": 5,
+  "rs_res": 128,
+  "rs_n_base": 25,
+  "rs_n_val": 5,
+  "rs_s0_epochs": 10,
+  "rs_r_epochs": 2,
+  "rs_m_episodes": 1000,
+  "res_sweep": [
+   64,
+   96,
+   128,
+   160,
+   224
+  ],
+  "amp": true,
+  "limit": null
+ }
+}

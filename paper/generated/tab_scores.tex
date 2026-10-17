@@ -1,0 +1,19 @@
+\begin{tabular}{@{}lcccccccc@{}}
+\toprule
+ & \multicolumn{2}{c}{RESISC45} & \multicolumn{2}{c}{EuroSAT-MS} & \multicolumn{2}{c}{PlantVillage} & \multicolumn{2}{c}{PlantDoc} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+Score at 30\% of the parameters & P & PMP & P & PMP & P & PMP & P & PMP \\
+\midrule
+Dense ResNet-18, S0 only & \multicolumn{2}{c}{$86.9_{\pm3.4}$} & \multicolumn{2}{c}{$62.1_{\pm5.3}$} & \multicolumn{2}{c}{$91.4_{\pm5.6}$} & \multicolumn{2}{c}{$55.4_{\pm1.3}$} \\
+Dense ResNet-18, S0+R+M+R & \multicolumn{2}{c}{$86.7_{\pm3.3}$} & \multicolumn{2}{c}{$61.7_{\pm5.1}$} & \multicolumn{2}{c}{$91.3_{\pm5.6}$} & \multicolumn{2}{c}{$55.5_{\pm1.1}$} \\
+\midrule
+Random & $79.7_{\pm4.9}$ & $81.0_{\pm4.2}$ & $55.6_{\pm6.4}$ & $57.6_{\pm6.0}$ & $85.6_{\pm8.1}$ & $86.8_{\pm7.7}$ & $46.6_{\pm1.3}$ & $46.7_{\pm1.7}$ \\
+Filter $\ell_1$ & $80.5_{\pm4.5}$ & $81.0_{\pm4.2}$ & $56.2_{\pm7.9}$ & $57.0_{\pm6.0}$ & $85.8_{\pm8.3}$ & $86.4_{\pm7.7}$ & $48.7_{\pm0.9}$ & $48.1_{\pm0.8}$ \\
+BN scale $|\gamma|$ & -- & $79.7_{\pm4.2}$ & -- & $55.0_{\pm6.1}$ & $85.1_{\pm8.9}$ & $85.1_{\pm8.7}$ & $44.4_{\pm1.7}$ & $45.5_{\pm1.0}$ \\
+Taylor & $82.2_{\pm3.9}$ & $82.2_{\pm3.9}$ & $58.1_{\pm6.6}$ & $57.0_{\pm8.0}$ & $88.3_{\pm7.1}$ & $87.1_{\pm7.1}$ & $47.9_{\pm1.2}$ & $48.5_{\pm1.0}$ \\
+Gradient $\mathcal{G}$ & -- & $81.0_{\pm4.5}$ & -- & $56.4_{\pm6.5}$ & $87.3_{\pm7.2}$ & $86.7_{\pm7.9}$ & $47.6_{\pm1.5}$ & $46.9_{\pm2.5}$ \\
+Variance $\mathcal{V}$ & -- & $81.0_{\pm4.0}$ & -- & $56.5_{\pm5.2}$ & $86.5_{\pm6.9}$ & $86.5_{\pm7.3}$ & $47.2_{\pm1.4}$ & $47.3_{\pm1.3}$ \\
+Fisher $\mathcal{D}$ & $79.3_{\pm4.1}$ & $79.5_{\pm3.9}$ & $55.8_{\pm6.9}$ & $56.0_{\pm7.5}$ & $85.2_{\pm8.9}$ & $85.3_{\pm8.0}$ & $46.8_{\pm0.8}$ & $46.4_{\pm1.3}$ \\
+DACIS & $79.7_{\pm4.1}$ & $80.5_{\pm4.2}$ & $56.3_{\pm6.7}$ & $57.1_{\pm4.9}$ & $86.4_{\pm7.7}$ & $86.6_{\pm7.5}$ & $47.3_{\pm1.4}$ & $47.5_{\pm1.6}$ \\
+\bottomrule
+\end{tabular}

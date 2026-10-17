@@ -1,0 +1,19 @@
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+EuroSAT-MS, novel classes & 1-shot & 5-shot & 10-shot \\
+\midrule
+13 bands, dense (S0) & $49.4_{\pm5.5}$ & $62.1_{\pm5.3}$ & $64.9_{\pm5.0}$ \\
+RGB bands, dense (S0) & $53.7_{\pm4.3}$ & $68.7_{\pm3.9}$ & $71.4_{\pm3.6}$ \\
+13 bands, dense (S0+R+M+R) & $49.0_{\pm5.2}$ & $61.7_{\pm5.1}$ & $64.3_{\pm5.0}$ \\
+RGB bands, dense (S0+R+M+R) & $53.1_{\pm4.5}$ & $68.1_{\pm3.8}$ & $70.9_{\pm3.4}$ \\
+13 bands, filter $\ell_1$, PMP 30\% & $46.1_{\pm6.5}$ & $57.0_{\pm6.0}$ & $59.3_{\pm5.2}$ \\
+RGB bands, filter $\ell_1$, PMP 30\% & $49.8_{\pm2.4}$ & $63.9_{\pm2.6}$ & $66.6_{\pm2.3}$ \\
+13 bands, DACIS, PMP 30\% & $46.0_{\pm5.4}$ & $57.1_{\pm4.9}$ & $59.4_{\pm4.1}$ \\
+RGB bands, DACIS, PMP 30\% & $50.2_{\pm3.5}$ & $63.6_{\pm3.9}$ & $66.2_{\pm3.7}$ \\
+13 bands, MobileNetV3-Small & $57.7_{\pm7.7}$ & $72.4_{\pm4.9}$ & $75.7_{\pm4.5}$ \\
+RGB bands, MobileNetV3-Small & $58.3_{\pm3.7}$ & $74.7_{\pm4.1}$ & $78.0_{\pm4.1}$ \\
+\midrule
+13 bands $-$ RGB, dense (5-shot) & \multicolumn{3}{c}{$\ensuremath{-}6.6$ {\scriptsize[\ensuremath{-}17.4,+4.2]}} \\
+13 bands $-$ RGB, DACIS PMP (5-shot) & \multicolumn{3}{c}{$\ensuremath{-}6.4$ {\scriptsize[\ensuremath{-}15.5,+2.6]}} \\
+\bottomrule
+\end{tabular}

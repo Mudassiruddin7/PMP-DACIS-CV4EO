@@ -1,0 +1,65 @@
+== paper_review: OK
+nloading cmex10.pfb
+note: downloading cmmi7.pfb
+note: downloading cmsy7.pfb
+note: downloading cmr5.pfb
+note: downloading cmmi5.pfb
+note: downloading cmr9.pfb
+note: downloading cmmi9.pfb
+note: downloading cmr6.pfb
+note: downloading cmsy6.pfb
+note: downloading cmmi6.pfb
+note: downloading cmsy9.pfb
+note: downloading cmr8.pfb
+note: downloading cmmi8.pfb
+note: downloading cmsy8.pfb
+note: Writing `paper_review.pdf` (186.3935546875 KiB)
+note: Skipped writing 4 intermediate files (use --keep-intermediates to keep them)
+warning: lineno.sty:296: Invalid UTF-8 byte or sequence at line 296 replaced by U+FFFD.
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: lineno.sty:296: Invalid UTF-8 byte or sequence at line 296 replaced by U+FFFD.
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: lineno.sty:296: Invalid UTF-8 byte or sequence at line 296 replaced by U+FFFD.
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: lineno.sty:296: Invalid UTF-8 byte or sequence at line 296 replaced by U+FFFD.
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: lineno.sty:296: Invalid UTF-8 byte or sequence at line 296 replaced by U+FFFD.
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
+
+== paper_final: OK
+note: Running TeX ...
+note: Running BibTeX on paper_final.aux ...
+note: Rerunning TeX because bibtex was run ...
+note: Rerunning TeX because "paper_final.aux" changed ...
+note: Rerunning TeX because "paper_final.aux" changed ...
+note: Running xdvipdfmx ...
+note: Writing `paper_final.pdf` (173.2099609375 KiB)
+note: Skipped writing 4 intermediate files (use --keep-intermediates to keep them)
+warning: paper_final.tex:14: Overfull \hbox (181.12798pt too wide) in paragraph at lines 14--14
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: paper_final.tex:14: Overfull \hbox (181.12798pt too wide) in paragraph at lines 14--14
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: paper_final.tex:14: Overfull \hbox (181.12798pt too wide) in paragraph at lines 14--14
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: paper_final.tex:14: Overfull \hbox (181.12798pt too wide) in paragraph at lines 14--14
+warning: sec_results:57: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--57
+warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
+
+== paper_supp: OK
+note: Running TeX ...
+note: Rerunning TeX because "paper_supp.aux" changed ...
+note: Running xdvipdfmx ...
+note: Writing `paper_supp.pdf` (85.5263671875 KiB)
+note: Skipped writing 2 intermediate files (use --keep-intermediates to keep them)
+warning: lineno.sty:296: Invalid UTF-8 byte or sequence at line 296 replaced by U+FFFD.
+warning: paper_supp.tex:31: Overfull \hbox (73.50415pt too wide) in paragraph at lines 1--31
+warning: paper_supp.tex:39: Overfull \hbox (11.94417pt too wide) in paragraph at lines 1--39
+warning: paper_supp.tex:47: Overfull \hbox (11.69612pt too wide) in paragraph at lines 1--47
+warning: paper_supp.tex:55: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--55
+warning: lineno.sty:296: Invalid UTF-8 byte or sequence at line 296 replaced by U+FFFD.
+warning: paper_supp.tex:31: Overfull \hbox (73.50415pt too wide) in paragraph at lines 1--31
+warning: paper_supp.tex:39: Overfull \hbox (11.94417pt too wide) in paragraph at lines 1--39
+warning: paper_supp.tex:47: Overfull \hbox (11.69612pt too wide) in paragraph at lines 1--47
+warning: paper_supp.tex:55: Overfull \hbox (23.74742pt too wide) in paragraph at lines 1--55
+warning: warnings were issued by the TeX engine; use --print and/or --keep-logs for details.
