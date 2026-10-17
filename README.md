@@ -5,7 +5,7 @@ eight channel scores and seven training schedules on aerial scenes (NWPU-RESISC4
 (EuroSAT-MS) and crop photographs (PlantVillage, PlantDoc), and ships a one-click notebook that reruns every
 experiment and rebuilds the paper tables, figures and PDFs from the saved results.
 
-[![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/Mudassiruddin7/PMP-DACIS/blob/main/notebooks/pmp_dacis_cv4eo.py)
+[![Open in molab](https://marimo.io/molab-shield.svg)](https://molab.marimo.io/github/Mudassiruddin7/PMP-DACIS-CV4EO/blob/main/notebooks/pmp_dacis_cv4eo.py)
 
 ## Reproduce in one click
 
