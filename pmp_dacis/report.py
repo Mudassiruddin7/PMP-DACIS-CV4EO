@@ -144,6 +144,8 @@ def pm(ms, d=1, bold=False):
 
 
 def sgn(x, d=1):
+    if round(x, d) == 0:                                       # no "-0.0" or "+0.0"
+        return f"{0:.{d}f}"
     return f"{x:+.{d}f}".replace("-", r"\ensuremath{-}")
 
 
@@ -784,14 +786,14 @@ def numbers(R):
     if mrows:
         bs = [(h, f, c, pp) for h, f, c, pp in mrows if pp["p"] * len(mrows) < 0.05]
         n["cmpm:nbonf"] = str(len(bs))
-        n["cmpm:bonflist"] = "; ".join(f"{CRIT_PLAIN[c]} at {f}\\% on {h} ({psgn(pp['mean'])})" for h, f, c, pp in bs) if bs else "none"
+        n["cmpm:bonflist"] = "; ".join(f"{CRIT_PLAIN[c]} at {f}\\% on {h}, {sgn(pp['mean'])}" for h, f, c, pp in bs) if bs else "none"
         n["cmpm:bonfeo"] = ", ".join(sorted({h for h, _, _, _ in bs})) if bs else "none"
         dac = [(h, f, pp) for h, f, c, pp in mrows if c == "dacis"]
         n["cmpm:dacis-above"] = str(sum(1 for _, _, pp in dac if pp["lo"] > 0))
         n["cmpm:dacis-below"] = str(sum(1 for _, _, pp in dac if pp["hi"] < 0))
         n["cmpm:dacis-total"] = str(len(dac))
         bl = [(h, f, pp) for h, f, pp in dac if pp["hi"] < 0]
-        n["cmpm:dacis-belowlist"] = "; ".join(f"{f}\\% on {h} ({psgn(pp['mean'])} points)" for h, f, pp in bl) if bl else "none"
+        n["cmpm:dacis-belowlist"] = "; ".join(f"{f}\\% on {h}, {sgn(pp['mean'])} points" for h, f, pp in bl) if bl else "none"
     # pruned MobileNetV2: scores against random selection and against the dense network
     mt = ma = mb = 0
     mlist_a, mlist_b = [], []
