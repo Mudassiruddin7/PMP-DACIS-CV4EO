@@ -8,7 +8,7 @@ same test episodes on ten random class partitions (five for the leaf sets), so t
 
 The paper is under double-blind review at the 4th CV4EO workshop at WACV 2027. Authors and the paper are added here after the decision.
 
-**Project page:** <https://mudassiruddin7.github.io/PMP-DACIS-CV4EO/>
+**Project page:** <https://mudassiruddin7.github.io/benchmarking-channel-pruning-few-shot-eo/>
 
 Random channel choice held up against nearly every clever score. Only one beat it, and a network nobody pruned beat them all.
 
