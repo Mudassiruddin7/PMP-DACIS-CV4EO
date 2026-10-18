@@ -1,23 +1,36 @@
-# Do channel scores matter? Pruning for few-shot Earth observation
+# Channel importance scores for few-shot Earth observation
 
-Does the choice of channels matter when a pretrained network is pruned for few-shot recognition of unseen classes? This
-repository compares eight channel scores (random, filter L1, BatchNorm scale, Taylor, three single statistics and DACIS)
-and seven training schedules on a ResNet-18, and five of the scores on a MobileNetV2, with held-out classes of aerial
-scenes (NWPU-RESISC45) and 13-band Sentinel-2 patches (EuroSAT-MS); PlantVillage and PlantDoc leaf photographs are a
-ground-level control. One-click notebooks rerun every experiment and rebuild the paper tables, figures and PDFs.
+Which channels do you keep when a pretrained network is pruned to recognise classes it never trained on, from five labelled examples?
+This repository compares eight channel scores (random, filter L1, BatchNorm scale, Taylor, three single statistics and DACIS) and seven
+training schedules on a ResNet-18, and five of the scores on a MobileNetV2, on classes held out from aerial scenes (NWPU-RESISC45) and
+13-band Sentinel-2 patches (EuroSAT-MS). PlantVillage and PlantDoc leaf photographs are a ground-level control. Every method answers the
+same test episodes on ten random class partitions (five for the leaf sets), so the comparisons are paired.
 
-The method name PMP-DACIS comes from an earlier preprint. The numbers of that preprint do not reproduce under this
-protocol (see *About earlier numbers*).
+The paper is under double-blind review at the 4th CV4EO workshop at WACV 2027. Authors and the paper are added here after the decision.
 
-Run the notebook with [marimo](https://marimo.io): `marimo edit notebooks/pmp_dacis_cv4eo.py`
+**Project page:** <https://mudassiruddin7.github.io/PMP-DACIS-CV4EO/>
+
+Random channel choice held up against nearly every clever score. Only one beat it, and a network nobody pruned beat them all.
+
+| 5-shot accuracy on held-out classes, RESISC45 | |
+|---|---|
+| Taylor score against random choice, ResNet-18 kept at 30% of its weights | +1.4 points, ahead in 10 of 10 partitions |
+| The same at 10% of the weights (5 partitions) | +6.0 points |
+| The same on a MobileNetV2 kept at 25% | +6.5 points |
+| BatchNorm-scale score against random choice, MobileNetV2 at 25% | -8.3 points |
+| DACIS against random choice, ResNet-18 at 30% | 0.0 points (95% interval -0.8 to +0.7) |
+| Multiply-accumulates removed, then CPU time removed, at 30% | 58%, then 39% |
+| MobileNetV3-Small, never pruned | 88.1% (the best pruned network we built: 85.9%) |
+
+The method name PMP-DACIS comes from an earlier preprint. The numbers of that preprint do not reproduce under this protocol (see
+*About earlier numbers*).
 
 ## Reproduce in one click
 
 1. Open `notebooks/pmp_dacis_cv4eo.py` with marimo (`marimo edit`) on a GPU machine.
 2. Press **Run all**. Nothing has to be selected or typed.
 3. When the last cell finishes, press **Results**. You get `results.zip` with every run (JSON and per-episode arrays),
-   all tables and figures, the logs, and the compiled PDFs (`paper_review.pdf`, anonymous, `paper_final.pdf`, with
-   authors, and `paper_supp.pdf`).
+   all tables and figures, the logs, and the compiled PDFs of the anonymous review version and its supplement.
 
 The notebook downloads the four datasets from the Hugging Face Hub (about 5 GB) and trains about 130 models per class
 partition. On an RTX 6000-class GPU the whole run takes about two hours. Finished runs are written to disk, so *Run all*
@@ -26,8 +39,8 @@ profile that only checks the code path; those numbers are not results. It also r
 `python notebooks/pmp_dacis_cv4eo.py`.
 
 A second notebook, `notebooks/pmp_dacis_cv4eo_ext.py`, adds class partitions 5 to 9 for the RESISC45 and EuroSAT-MS
-comparisons and prunes MobileNetV2 with the same scores (about 1.5 hours on an RTX 6000-class GPU). The paper combines both
-runs: `python tools/finalize.py results.zip --ext results_extension.zip`.
+comparisons and prunes MobileNetV2 with the same scores (about 1.5 hours on an RTX 6000-class GPU). The reported numbers combine
+both runs; `results/` holds the merged saved runs.
 
 The library lives in `pmp_dacis/` (readable sources; the notebook embeds a copy so that one file is enough).
 `python tests/test_core.py` checks the pruning surgery, the budget solver, the episode sampler, the run cache and the
@@ -53,7 +66,6 @@ dataset variants.
 
 ## Results
 
-<!-- RESULTS:BEGIN -->
 Run on NVIDIA RTX PRO 6000 Blackwell Server Edition; 10 random class partitions for RESISC45 and EuroSAT-MS (5 for PlantVillage; rows for 50, 20 and 10 % of the parameters use 5); episodic learning rate 0.0001; mean ± standard deviation over partitions, 5-way 5-shot test episodes, identical for every row. Full tables: `paper/generated/summary.md`.
 
 | model | params kept | RESISC45 | EuroSAT-MS | PlantVillage | PlantDoc |
@@ -91,7 +103,6 @@ Run on NVIDIA RTX PRO 6000 Blackwell Server Edition; 10 random class partitions 
 | MobileNetV2, 25%, BN scale, P | 25% | 58.7 ± 5.5 | 51.7 ± 10.6 | -- | -- |
 | MobileNetV2, 25%, Taylor, P | 25% | 73.4 ± 4.2 | 58.6 ± 7.6 | -- | -- |
 | MobileNetV2, 25%, DACIS, P | 25% | 68.6 ± 2.8 | 55.2 ± 8.5 | -- | -- |
-<!-- RESULTS:END -->
 
 ## About earlier numbers
 
@@ -103,14 +114,18 @@ and should not be cited. The scripts were removed from the working tree; they re
 ## Layout
 
 ```
-pmp_dacis/        library: data, ResNet-18 surgery, scores, training stages, evaluation, report, paper build
+docs/             the project page (static HTML, published with GitHub Pages)
+pmp_dacis/        library: data, ResNet-18 surgery, scores, training stages, evaluation, report
 notebooks/        pmp_dacis_cv4eo.py (main study) and pmp_dacis_cv4eo_ext.py (partitions 5-9, pruned MobileNetV2)
-paper/            LaTeX sources (WACV 2027 style), generated tables and figures, built PDFs in final/
 results/          saved runs of the reported experiments (JSON and per-episode arrays)
 results_replication/  the same runs on a laptop GPU, and latency on a named CPU
+results_tables/   the generated summary and figures of the reported run
 tests/            unit tests for the parts where a silent bug would change the science
-tools/            notebook builder, result finaliser, number and anonymity checkers, CPU latency script
+tools/            the notebook templates and builder, and the CPU latency script
 ```
+
+The paper sources are not part of this repository while the paper is under review. The notebooks carry an anonymous copy of them
+(gzip and base64) so that *Run all* can rebuild the review PDF.
 
 ## License
 

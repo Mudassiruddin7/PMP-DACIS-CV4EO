@@ -7,12 +7,3 @@ data/
 cache/
 *.pt
 pmp_dacis_run/
-# LaTeX build products (the PDFs themselves are tracked)
-paper/*.aux
-paper/*.log
-paper/*.out
-paper/*.bbl
-paper/*.blg
-paper/_kit_main_reference.tex
-*.pdf
-!paper/final/*.pdf

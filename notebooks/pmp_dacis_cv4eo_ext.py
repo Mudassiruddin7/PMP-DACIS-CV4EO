@@ -66,7 +66,7 @@ def _():
 def _(Path, base64, io, os, sys, tarfile):
     WORK = Path(os.environ.get("PMP_WORK", "pmp_dacis_ext_run")).resolve()
     SRC = WORK / "src"
-    PKG_B64 = """H4sIAAhf02oC/+y9aXsb17UumM/8FRXYjqpkECJIUZKZw3Q0WVFbcvRIipJuGreMkYSJyShwMsP+7f2+a+2xqkBSsux7znPjJxELVXvea6+95r
+    PKG_B64 = """H4sIACBf02oC/+y9aXsb17UumM/8FRXYjqpkECJIUZKZw3Q0WVFbcvRIipJuGreMkYSJyShwMsP+7f2+a+2xqkBSsux7znPjJxELVXvea6+95r
 WYLvJBtz8u7uX5eDZe5XlrcfGHz/vfFv578OCB/MV/5b9b21v3/9De3XrYfvDwvrxvb2/t3v9DsvWH3+G/k2LVXWIof/g/879Go/Hm9ZvNZ4+f
 vny3lwzGRX85no5n3d54Ml5dbHbPusth0j/qzmbDSbJYnszGs8PkbLw6SqbDVXdzMuwu5dVovkxGw7PN4mi+SsbT7iFqTbpFMR6N+93VeD5roa
 eNPD8dLgv8yvNkP2lst7ZaW42NP/znv/9t/y3c+e9Pxp//6N/m/O883HlQOv/t9lb7P+f/dzr/T+fTaXc2SCbj2TAZzlbLi2QxH89We0myuFgd

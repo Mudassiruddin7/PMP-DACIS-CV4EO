@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="en-GB" data-review="blind">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Channel Importance Scores for Few-Shot Earth Observation</title>
+<meta name="description" content="A benchmark of channel pruning for few-shot aerial and Sentinel-2 scene classification on classes the network has never seen.">
+<!-- Remove the next line when the review is over and the page should be found by search engines. -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%2313202C'/%3E%3Cg fill='%23E9EEF0'%3E%3Crect x='6' y='8' width='3' height='16'/%3E%3Crect x='12' y='8' width='3' height='16'/%3E%3Crect x='18' y='8' width='3' height='16' opacity='.3'/%3E%3Crect x='24' y='8' width='3' height='16'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=Nanum+Pen+Script&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to the content</a>
+
+<!-- a little wobble, applied to the hand-drawn icons -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <filter id="wob" x="-6%" y="-6%" width="112%" height="112%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="4" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2.6" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <pattern id="hatch" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="7" stroke="currentColor" stroke-width="1.4" opacity=".55"/>
+    </pattern>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#top">CV4EO · WACV 2027</a>
+    <nav class="nav" aria-label="Sections">
+      <a href="#found">What we found</a>
+      <a href="#cut">The cut</a>
+      <a href="#scores">Scores</a>
+      <a href="#protocol">Protocol</a>
+      <a href="#results">Results</a>
+      <a href="#cost">Cost</a>
+      <a href="#bands">Bands</a>
+      <a href="#advice">Takeaways</a>
+      <a href="#caveats">Caveats</a>
+    </nav>
+    <div class="meter" title="Scroll progress, drawn as a network being pruned to 30% of its channels">
+      <svg id="meter-svg" viewBox="0 0 120 18" aria-hidden="true"></svg>
+      <output id="meter-out" aria-hidden="true">kept 100%</output>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+<!-- ===================================================== HERO -->
+<section class="hero" id="top">
+  <div class="wrap grid">
+    <div class="t7">
+      <p class="kicker">4th CV4EO workshop at WACV 2027 · double-blind review</p>
+      <h1>Channel importance scores for <span style="white-space:nowrap">few-shot</span> Earth observation<span class="sub">A benchmark on unseen classes</span></h1>
+      <p class="lead">A small satellite meets a kind of place it was never trained on: a roundabout, a wetland, a field of storage tanks. It gets five labelled photos and very little compute. To fit the computer, somebody has to shrink the network first. <mark>Which channels do they throw away?</mark></p>
+      <p>We compared eight ways of choosing, on aerial scenes, 13-band Sentinel-2 patches and leaf photographs, and we always tested on classes the network had never seen.</p>
+      <noscript><p class="small">The charts and tables on this page are drawn with JavaScript. The text and the pictures work without it.</p></noscript>
+      <p class="review-flag during-review"><b>Anonymous for now.</b> Authors, the paper and the code are linked here after the decision.</p>
+    </div>
+
+    <div class="hero-side">
+      <div class="sat" aria-hidden="true">
+        <svg viewBox="0 0 170 120" color="currentColor">
+          <g filter="url(#wob)" class="ic">
+            <path class="st" d="M-8 104 Q85 58 178 104" stroke-dasharray="3 8"/>
+            <rect class="fl" style="fill:var(--c-l1)" x="14" y="40" width="46" height="24" transform="translate(4 4)"/>
+            <rect class="fl" style="fill:var(--c-l1)" x="112" y="40" width="46" height="24" transform="translate(4 4)"/>
+            <rect class="st" x="14" y="40" width="46" height="24"/>
+            <path class="st" d="M29 40v24M44 40v24M14 52h46"/>
+            <rect class="st" x="112" y="40" width="46" height="24"/>
+            <path class="st" d="M127 40v24M142 40v24M112 52h46"/>
+            <path class="st" d="M60 52h12M100 52h12"/>
+            <rect class="fl" style="fill:var(--c-random)" x="72" y="34" width="28" height="36" rx="3" transform="translate(4 4)"/>
+            <rect class="st" x="72" y="34" width="28" height="36" rx="3"/>
+            <path class="st" d="M86 34v-9M74 20q12-14 24 0"/>
+            <circle class="fl-ink" cx="86" cy="52" r="4"/>
+            <path class="st" d="M86 74v18" stroke-dasharray="2 6"/>
+            <path class="st" d="M80 88l6 8 6-8"/>
+          </g>
+        </svg>
+        <div class="sat-note">5 photos.<br>That's all it gets.</div>
+      </div>
+      <div class="prints" aria-label="Sample aerial scenes from classes held out in one class partition">
+        <figure class="print" style="--r:-2.5deg;--y:6px"><img src="assets/img/aerial/airplane_53.jpg" alt="Aerial view of two airliners at their gates" width="256" height="256"><figcaption>airplane</figcaption></figure>
+        <figure class="print" style="--r:1.5deg;--y:-4px"><img src="assets/img/aerial/island_41.jpg" alt="A small rocky island in turquoise water" width="256" height="256"><figcaption>island</figcaption></figure>
+        <figure class="print" style="--r:-1deg;--y:8px"><img src="assets/img/aerial/storage_tank_15.jpg" alt="Round storage tanks in an oil depot" width="256" height="256"><figcaption>storage tank</figcaption></figure>
+        <figure class="print" style="--r:2deg;--y:0"><img src="assets/img/aerial/roundabout_41.jpg" alt="A roundabout with a grassy centre" width="256" height="256"><figcaption>roundabout</figcaption></figure>
+        <figure class="print" style="--r:-1.5deg;--y:-8px"><img src="assets/img/aerial/terrace_80.jpg" alt="Curved agricultural terraces on a hillside" width="256" height="256"><figcaption>terrace</figcaption></figure>
+        <figure class="print" style="--r:2.5deg;--y:4px"><img src="assets/img/aerial/tennis_court_15.jpg" alt="Tennis courts next to a large building" width="256" height="256"><figcaption>tennis court</figcaption></figure>
+        <figure class="print" style="--r:-2deg;--y:0"><img src="assets/img/aerial/industrial_area_80.jpg" alt="Large blue-roofed factory halls" width="256" height="256"><figcaption>industrial area</figcaption></figure>
+        <figure class="print" style="--r:1deg;--y:10px"><img src="assets/img/aerial/palace_41.jpg" alt="A palace complex around a courtyard" width="256" height="256"><figcaption>palace</figcaption></figure>
+        <figure class="print" style="--r:-3deg;--y:-2px"><img src="assets/img/aerial/mobile_home_park_15.jpg" alt="Rows of mobile homes" width="256" height="256"><figcaption>mobile home park</figcaption></figure>
+      </div>
+      <div class="hero-note note" style="--rot:-2deg">15 of the 45 scene types, held out. The network never trained on any of them.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== LEDGER -->
+<section class="band sec sec-tight" id="found" aria-labelledby="found-h">
+  <div class="wrap grid">
+    <div class="t8">
+      <div class="sec-head"><h2 id="found-h" class="pull">Random channel choice held up against nearly every clever score. Only one beat it, and a network nobody pruned beat them all.</h2></div>
+      <ol class="ledger" aria-label="What came out, in numbers">
+        <li><a href="#fig-forest"><span class="l-k">Taylor score against random channel choice<small>ResNet-18 kept at 30% of its weights · ahead in 10 of 10 partitions</small></span><span class="l-v"><span class="sym win"></span><span data-n="lead.r18.30">+1.4</span><i>points</i></span></a></li>
+        <li><a href="#fig-lead"><span class="l-k">The same, cut harder<small>ResNet-18 at 10% of its weights · 5 partitions</small></span><span class="l-v"><span class="sym win"></span><span data-n="lead.r18.10">+6.0</span><i>points</i></span></a></li>
+        <li><a href="#fig-lead"><span class="l-k">The same on a different network<small>MobileNetV2 at 25% of its weights</small></span><span class="l-v"><span class="sym win"></span><span data-n="lead.mb.25">+6.5</span><i>points</i></span></a></li>
+        <li><a href="#fig-lead"><span class="l-k">BatchNorm-scale score against random choice<small>MobileNetV2 at 25% of its weights</small></span><span class="l-v"><span class="sym lose"></span><span data-n="bn.mb.25">−8.3</span><i>points</i></span></a></li>
+        <li><a href="#fig-forest"><span class="l-k">DACIS against random choice<small>ResNet-18 at 30% · 95% interval −0.8 to +0.7</small></span><span class="l-v"><span class="sym tie"></span><span data-n="dacis.r18.30">0.0</span><i>points</i></span></a></li>
+        <li><a href="#fig-latency"><span class="l-k">Multiply-accumulates removed, then CPU time removed<small>ResNet-18 at 30% of its weights · single thread, laptop CPU</small></span><span class="l-v"><span class="sym neu"></span>58%<i>then</i>39%</span></a></li>
+        <li><a href="#fig-scatter"><span class="l-k">MobileNetV3-Small, never pruned<small>5-shot accuracy on RESISC45 · the best pruned network we built reaches 85.9%</small></span><span class="l-v"><span class="sym win"></span>88.1%</span></a></li>
+      </ol>
+      <p class="foot">Everything is 5-way 5-shot accuracy on classes held out from training, in percentage points, paired over ten class partitions unless a row says otherwise. RESISC45 aerial scenes except where noted. The symbols repeat in the figures: ▲ clearly ahead of random choice, ● cannot be told apart, ▼ clearly behind.</p>
+    </div>
+    <aside class="m4">
+      <div class="note" style="--rot:-3deg;margin-top:150px">random choice is the bar every clever score has to clear
+        <svg viewBox="0 0 74 54" aria-hidden="true" style="margin-left:-6px;transform:scaleX(-1)"><path d="M6 6 C 30 2, 50 14, 58 40"/><path d="M48 36 L59 44 L63 30"/></svg>
+      </div>
+    </aside>
+  </div>
+</section>
+
+<!-- ===================================================== THE CUT -->
+<section class="sec" id="cut" aria-labelledby="cut-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head"><h2 id="cut-h">What exactly gets cut?</h2></div>
+      <p>Inside a ResNet-18 sit eight residual blocks. Each starts with a convolution that has 64 to 512 output channels, 1,920 in all. Those are the channels we prune. The stem, the shortcuts and the block outputs stay as they are, so no index has to line up across a residual addition.</p>
+      <p>Every method follows the same depth rule: deeper blocks keep a smaller share, because that is where most of the weights live. Two scores therefore differ in one thing only, which channels they keep. After each cut the network trains briefly on the training classes to recover.</p>
+    </div>
+    <aside class="m4"><div class="note" style="--rot:2deg;margin-top:56px">deep blocks pay the most
+      <svg viewBox="0 0 74 54" aria-hidden="true" style="margin-left:30px"><path d="M10 6 C 36 4, 56 20, 64 46"/><path d="M52 40 L64 48 L68 34"/></svg></div></aside>
+
+    <figure class="fig w12" id="fig-budget">
+      <div class="ctrl"><span class="lab">Keep</span>
+        <div class="seg" role="group" aria-label="Share of the trunk parameters that remains" id="seg-budget"></div>
+        <span class="lab" style="margin-left:auto">of the trunk's 11.18 M parameters</span></div>
+      <div class="chart" id="chart-budget" role="img" aria-label="Bar chart of how many channels each of the eight ResNet-18 blocks keeps at the chosen budget"></div>
+      <p class="readout" id="read-budget"></p>
+      <figcaption><b>Fig. A</b>Channels kept in each of the eight blocks. The counts are from our runs; the dashed outline is the block before pruning.</figcaption>
+    </figure>
+
+    <div class="t7">
+      <h3>Same budget, very different picks</h3>
+      <p style="margin-top:12px">Here is what four scores kept in one block of one trained network: partition 0, a single cut to 30%, each tick a channel. They look nothing alike.</p>
+    </div>
+    <figure class="fig w12" id="fig-picks">
+      <div class="ctrl"><span class="lab">Block</span><div class="seg" role="group" aria-label="Residual block to inspect" id="seg-block"></div></div>
+      <div class="picks-wrap">
+        <div id="picks-rows"></div>
+        <div id="picks-jac"></div>
+      </div>
+      <p class="readout" id="read-picks"></p>
+      <figcaption><b>Fig. B</b>Channels kept by four scores in one block (dark ticks), partition 0, 30% of the parameters, one pruning step. Accuracy is the 10-partition mean of 5-shot RESISC45 after recovery. Overlap is channels both scores kept divided by channels either kept, over all eight blocks.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================== SCORES -->
+<section class="band sec" id="scores" aria-labelledby="scores-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head">
+        <h2 id="scores-h">How do you decide what to cut?</h2>
+        <p>We used eight scores built from five ideas. Four are standard. The fifth, DACIS, is a class-aware candidate that combines three statistics, and we also ran each of those three alone.</p>
+      </div>
+    </div>
+    <div class="w12 guide" role="list">
+      <article role="listitem">
+        <svg class="ic" viewBox="0 0 150 110" role="img" aria-label="Drawing of a die"><g filter="url(#wob)">
+          <rect class="fl" style="fill:var(--c-random)" x="40" y="26" width="62" height="62" rx="10" transform="translate(4 4) rotate(-8 71 57)"/>
+          <rect class="st" x="40" y="26" width="62" height="62" rx="10" transform="rotate(-8 71 57)"/>
+          <g class="fl-ink" transform="rotate(-8 71 57)"><circle cx="54" cy="40" r="4.6"/><circle cx="88" cy="40" r="4.6"/><circle cx="71" cy="57" r="4.6"/><circle cx="54" cy="74" r="4.6"/><circle cx="88" cy="74" r="4.6"/></g></g></svg>
+        <h3><span class="dot" style="background:var(--c-random)"></span>Random</h3>
+        <p>Roll a die for every channel. It costs nothing, so any score has to beat it to be worth computing.</p>
+        <span class="cite">the baseline</span>
+      </article>
+      <article role="listitem">
+        <svg class="ic" viewBox="0 0 150 110" role="img" aria-label="Drawing of a three-by-three filter with weights of different size"><g filter="url(#wob)">
+          <g id="l1cells"></g><text x="108" y="64">Σ|w|</text></g></svg>
+        <h3><span class="dot" style="background:var(--c-l1)"></span>Filter L1</h3>
+        <p>Add up the absolute weights of a channel's filter. A filter with small weights has little to say, so it goes first.</p>
+        <span class="cite">Li et al., ICLR 2017</span>
+      </article>
+      <article role="listitem">
+        <svg class="ic" viewBox="0 0 150 110" role="img" aria-label="Drawing of a volume knob"><g filter="url(#wob)">
+          <circle class="fl" style="fill:var(--c-bn)" cx="75" cy="58" r="28" transform="translate(4 4)"/>
+          <circle class="st" cx="75" cy="58" r="28"/>
+          <path class="st" d="M46.7 90.3 A42 42 0 1 1 103.3 90.3" stroke-dasharray="1.5 9.5" stroke-width="4"/>
+          <path class="st" d="M75 58 L88 36"/>
+          <text x="112" y="34">γ</text></g></svg>
+        <h3><span class="dot" style="background:var(--c-bn)"></span>BatchNorm scale</h3>
+        <p>Every channel is followed by a learned multiplier, γ. A small γ is a quiet channel. We read it off the pretrained network, without the sparsity penalty of the original.</p>
+        <span class="cite">Liu et al., ICCV 2017</span>
+      </article>
+      <article role="listitem">
+        <svg class="ic" viewBox="0 0 150 110" role="img" aria-label="Drawing of a stack of blocks with one pulled out"><g filter="url(#wob)">
+          <g id="jenga"></g>
+          <path class="st" d="M112 58 h18 m-6 -6 l6 6 -6 6" style="stroke:var(--pen)"/>
+          <text x="104" y="34">ΔL ?</text></g></svg>
+        <h3><span class="dot" style="background:var(--c-taylor)"></span>Taylor</h3>
+        <p>Estimate with one gradient how much the loss would change if the channel vanished. The channels the loss would barely notice go first.</p>
+        <span class="cite">Molchanov et al., ICLR 2017</span>
+      </article>
+      <article role="listitem">
+        <svg class="ic" viewBox="0 0 150 110" role="img" aria-label="Drawing of a mixing desk with three sliders set to 0.3, 0.2 and 0.5"><g filter="url(#wob)">
+          <g id="mixer"></g></g></svg>
+        <h3><span class="dot" style="background:var(--c-dacis)"></span>DACIS</h3>
+        <p>Rank each channel three ways: the size of its filter's gradient (G), how much its activation varies (V), and how well it separates the classes (D, a Fisher ratio). Mix the ranks 0.3, 0.2, 0.5. We fixed those weights before running anything.</p>
+        <span class="cite">a class-aware candidate</span>
+      </article>
+    </div>
+    <div class="t8">
+      <p class="small" style="margin-top:26px">All scores are computed from a calibration set of 40 images per training class. No score ever sees a held-out class.</p>
+      <details class="formulas"><summary>The formulas, for the curious</summary>
+<pre>Taylor_c = mean over images of | sum over x,y of  a_c(x,y) · dL/da_c(x,y) |
+           a_c: post-ReLU activation of the channel
+           L:   cross-entropy of a cosine nearest-prototype classifier whose
+                prototypes are the calibration class means (temperature 10)
+
+DACIS_c  = 0.3 · r(G_c) + 0.2 · r(V_c) + 0.5 · r(D_c)
+           r():  rank inside the block, scaled to [0, 1]
+           G_c:  mean l2 norm of dL/dW_c over calibration batches of 64 images
+           V_c:  variance across images of the spatially pooled activation
+           D_c:  sum_k n_k (mu_kc - mu_c)^2 / sum_k sum_{i in k} (a_ic - mu_kc)^2</pre>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== PROTOCOL -->
+<section class="sec" id="protocol" aria-labelledby="protocol-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head">
+        <h2 id="protocol-h">How we tried to keep it fair</h2>
+        <p>Most pruning papers score a network on the classes it was trained for. A mission does not get that luxury: the classes that matter change, and labels for a new one are few. So the test here is built on classes the network has never seen, and everything else is arranged around that.</p>
+      </div>
+      <h3>Hold the classes out</h3>
+      <p style="margin-top:12px">A seed fixes a random split of the scene types. For RESISC45, 25 classes train the network, 5 are kept for validation checks and 15 are the test. We repeated the whole study on 10 such partitions for the aerial and Sentinel-2 sets and on 5 for the leaf photographs.</p>
+    </div>
+
+    <figure class="fig w12" id="fig-partitions">
+      <div class="ctrl"><span class="lab">Partition</span><div class="seg" role="group" aria-label="Class partition" id="seg-part"></div></div>
+      <div class="pgrid-wrap">
+        <div class="pgrid" id="pgrid" role="group" aria-label="The 45 RESISC45 scene types, coloured by role in this partition"></div>
+        <dl class="plist" id="plist"></dl>
+      </div>
+      <figcaption><b>Fig. C</b>The 45 RESISC45 scene types in alphabetical order, coloured by their role in one partition. EuroSAT-MS splits its 10 land-cover classes 5 and 5; PlantVillage splits 38 leaf classes 24, 6 and 8.</figcaption>
+    </figure>
+
+    <div class="t7">
+      <h3>Test with five photos</h3>
+      <p style="margin-top:12px">A test episode picks 5 of the held-out classes and hands the network 5 labelled photos of each, the support set. Then it shows 15 further photos per class, the queries, and asks which class each one belongs to. The network turns every photo into an embedding, averages each class's five into a prototype, and names the nearest prototype by cosine similarity. We run 2,000 such episodes in every partition, at 1, 5 and 10 shots. The headline numbers use 5.</p>
+    </div>
+
+    <figure class="fig w12" id="fig-episode">
+      <div class="eps-head"><span>Support set · 5 classes × 5 photos</span><span>One query</span></div>
+      <div class="episode" id="episode">
+        <div class="eps-cols" id="eps-cols"></div>
+        <div class="eps-bus" id="eps-bus" aria-hidden="true"></div>
+        <div class="eps-q">
+          <img src="assets/img/episode/roundabout_q.jpg" alt="Aerial photograph of a roundabout, the query" width="192" height="192">
+          <div class="qm">which one?</div>
+        </div>
+      </div>
+      <figcaption><b>Fig. D</b>One 5-way 5-shot episode built from held-out classes of partition 0 (real RESISC45 scenes). The distances drawn to the prototypes are a sketch; the network does the actual measuring.</figcaption>
+    </figure>
+
+    <div class="t7">
+      <h3>A control from the ground</h3>
+      <p style="margin-top:12px">Leaf photographs make a ground-level control. They lack geospatial context, but the one learning rate we tuned was picked on PlantVillage, single leaves on a plain background in 38 classes, and the DACIS ablations run on it. PlantDoc, internet photographs with cluttered scenes, is the shift check: no PlantDoc image is used for training or pruning. The two share some concepts, so it is a field-image test and not a strict novel-class one.</p>
+    </div>
+    <aside class="m4">
+      <div class="leaves" aria-label="Three PlantVillage leaf photographs">
+        <figure class="print" style="--r:-3deg"><img src="assets/img/leaf/grape_black_rot.jpg" alt="A grape leaf with black rot spots on a grey background" width="256" height="256" loading="lazy"><figcaption>black rot</figcaption></figure>
+        <figure class="print" style="--r:2deg;--y:10px"><img src="assets/img/leaf/peach_bacterial_spot.jpg" alt="A yellowing peach leaf with bacterial spots" width="256" height="256" loading="lazy"><figcaption>bacterial spot</figcaption></figure>
+        <figure class="print" style="--r:-1.5deg"><img src="assets/img/leaf/tomato_late_blight.jpg" alt="A tomato leaf with a brown late-blight patch" width="256" height="256" loading="lazy"><figcaption>late blight</figcaption></figure>
+      </div>
+    </aside>
+
+    <div class="t7" style="margin-top:38px">
+      <h3>Give every method the same exam</h3>
+      <p style="margin-top:12px">The 2,000 episodes are drawn once for each dataset, partition and shot count, and every method answers the same ones. That makes the comparison paired. For each partition we subtract one method's accuracy from another's, average the differences over partitions and put a 95% t-interval around the mean. Partitions are the replicates, not episodes, because episodes from one trained network are not independent draws of the training run.</p>
+      <p>The sampling error of 2,000 episodes is at most 0.2 points. The spread between partitions is far larger, so that is what a small difference has to be measured against.</p>
+    </div>
+    <aside class="m4"><div class="note" style="--rot:-2deg;margin-top:40px">like grading everyone on one paper, not on ten different ones</div></aside>
+  </div>
+</section>
+
+<!-- ===================================================== RESULTS -->
+<section class="band sec" id="results" aria-labelledby="results-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head">
+        <h2 id="results-h">Does the choice of channels matter?</h2>
+        <p class="lead">At 30% of the parameters, barely. <mark>Random choice sits inside the pack</mark>, and the class partition you happen to draw moves accuracy by more than any score does.</p>
+      </div>
+    </div>
+
+    <figure class="fig w12" id="fig-strip">
+      <div class="ctrl"><span class="lab">Test on</span><div class="seg" role="group" aria-label="Test set" id="seg-strip"></div></div>
+      <div class="legend" id="leg-strip"></div>
+      <div class="chart" id="chart-strip" role="img" aria-label="Dot strip chart of the 5-shot accuracy of eight channel scores on each class partition"></div>
+      <p class="readout" id="read-strip"></p>
+      <figcaption><b>Fig. E</b>5-shot accuracy of eight scores on a ResNet-18 pruned to 30% of its parameters (schedule PMP). One dot per class partition, the tick is the mean, the dashed line is the unpruned network.</figcaption>
+    </figure>
+
+    <div class="t7" id="pairs">
+      <h3>Pair them up and one score stands out</h3>
+      <p style="margin-top:12px">Now subtract random choice from each score, partition by partition. Only Taylor clears zero. Of the 28 comparisons of a computed score with random choice that we made, two favoured the computed score and two favoured random choice; about 1.4 would be expected by chance. Only the Taylor lead on RESISC45 survives a Bonferroni correction (adjusted p = 0.005). DACIS cannot be told from random choice in any of the eight setting and schedule pairs.</p>
+    </div>
+    <figure class="fig w12" id="fig-forest">
+      <div class="ctrl"><span class="lab">Network</span><div class="seg" role="group" aria-label="Network and budget" id="seg-forest"></div></div>
+      <div class="legend" id="leg-forest"></div>
+      <div class="chart" id="chart-forest" role="img" aria-label="Forest plot of the gain over random channel choice for four scores on two datasets"></div>
+      <figcaption><b>Fig. F</b>Gain over random choice in 5-shot points. Dots are the mean paired difference, bars the 95% interval over ten partitions. Only Taylor is clearly above zero.</figcaption>
+    </figure>
+
+    <div class="t7" id="severity">
+      <h3>Cut harder and the score starts to matter</h3>
+      <p style="margin-top:12px">The Taylor lead grows with the severity of the cut. On RESISC45 it is +0.6, +1.4, +2.5 and +6.0 points at 50, 30, 20 and 10% of the ResNet-18, and +0.8, +4.2 and +6.5 at 60, 40 and 25% of the MobileNetV2. BatchNorm scale goes the other way: kept to 25%, the MobileNetV2 falls 8.3 points behind random choice. These runs cannot tell whether the architecture or the severity does the work.</p>
+    </div>
+    <figure class="fig w12" id="fig-lead">
+      <div class="ctrl"><span class="lab">Test on</span><div class="seg" role="group" aria-label="Test set" id="seg-lead"></div></div>
+      <div class="legend" id="leg-lead"></div>
+      <div class="chart" id="chart-lead" role="img" aria-label="Line chart of the gain over random choice as the share of kept parameters falls"></div>
+      <figcaption><b>Fig. G</b>Gain over random choice as more of the network is cut. ResNet-18 at 50, 20 and 10% rests on five partitions, everything else on ten.</figcaption>
+    </figure>
+
+    <div class="t7">
+      <h3>The lead is small, and it is consistent</h3>
+      <p style="margin-top:12px">At 30% Taylor's lead is a point or two. Look at it partition by partition and it is ahead every single time in the three settings below. Where the cut is gentle it slips: at 60% of the MobileNetV2 it is ahead in 8 of 10. Kendall's W across partitions is 0.67 on RESISC45 (p &lt; 0.001): Taylor is usually first, and BatchNorm scale and Fisher usually last.</p>
+    </div>
+    <figure class="fig w12" id="fig-race">
+      <div class="legend" id="leg-race"></div>
+      <div class="chart" id="chart-race" role="img" aria-label="For ten class partitions, the 5-shot accuracy of random choice and of the Taylor score in three settings"></div>
+      <figcaption><b>Fig. H</b>Random choice (hollow) and Taylor (filled) on each of the ten RESISC45 partitions. The partitions differ a lot from one another. The two methods differ in the same direction in all of them.</figcaption>
+    </figure>
+
+    <div class="t7" id="meta">
+      <h3>Did the meta-learning step help?</h3>
+      <p style="margin-top:12px">The schedule we tested, PMP, prunes to 60%, recovers, runs 1,000 episodes of prototypical meta-training, prunes again to the target budget, and recovers once more. While the episodes run we also collect, for every channel, the gradient norm of its filter. The second cut uses it in the DACIS score.</p>
+    </div>
+    <figure class="fig w12" id="fig-pmp">
+      <ol class="pmp" id="pmp" aria-label="The PMP schedule, step by step">
+        <li class="st"><b>start</b><span>ImageNet weights</span></li>
+        <li class="st"><b>S0</b><span>train on the base classes</span></li>
+        <li class="st cut"><b>P1</b><span>prune to 60%</span></li>
+        <li class="st"><b>R</b><span>recover</span></li>
+        <li class="st meta"><b>M</b><span>1,000 episodes of meta-training</span></li>
+        <li class="st cut"><b>P2</b><span>prune to the budget</span></li>
+        <li class="st"><b>R</b><span>recover</span></li>
+      </ol>
+      <p class="cap" style="margin-top:8px"><b>Fig. I</b>The PMP schedule. Hatched boxes cut channels. The dashed line is the meta-gradient statistic that M hands to the second cut.</p>
+    </figure>
+
+    <div class="t7">
+      <p>On the unpruned network the episodic stage changed 5-shot accuracy by −0.3 points on RESISC45 (interval −0.4 to −0.1) and −0.8 on EuroSAT-MS. At 1 shot it gained 0.6. Once the network is pruned, PMP gains 0.9 over plain prune-and-recover on RESISC45. So does meta-training before the cut (0.9). So does a probe that collects the gradient statistic and never updates a single weight (1.2). Meta-training after the cut gains nothing (0.0).</p>
+      <p>The schedules that gain are the ones whose score uses the meta-gradient term, and that lifts DACIS only to the level of random choice. This holds for our recipe: frozen BatchNorm statistics, 1,000 episodes, 5-way 5-shot, one learning rate.</p>
+    </div>
+    <aside class="m4"><div class="note" style="--rot:-2deg;margin-top:8px">the probe touches no weights and gains as much
+      <svg viewBox="0 0 74 54" aria-hidden="true" style="margin-left:-6px;transform:scaleX(-1)"><path d="M6 6 C 30 2, 50 14, 58 40"/><path d="M48 36 L59 44 L63 30"/></svg></div></aside>
+    <figure class="fig w12" id="fig-sched">
+      <div class="legend" id="leg-sched"></div>
+      <div class="chart" id="chart-sched" role="img" aria-label="Gain of four pruning schedules over plain prune-and-recover on two datasets"></div>
+      <figcaption><b>Fig. J</b>Gain over plain prune-and-recover (P) for DACIS at 30% of the parameters, with 95% intervals over ten partitions.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================== COST -->
+<section class="sec" id="cost" aria-labelledby="cost-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head">
+        <h2 id="cost-h">Is a pruned ResNet even the right thing to build?</h2>
+        <p>Pruning is supposed to buy speed. We counted multiply-accumulates exactly and timed the networks on a CPU.</p>
+      </div>
+    </div>
+
+    <figure class="fig w12" id="fig-latency">
+      <div class="ctrl"><span class="lab">ResNet-18 kept at</span><div class="seg" role="group" aria-label="Pruning budget" id="seg-lat"></div></div>
+      <div class="lat" id="lat"></div>
+      <p class="readout" id="read-lat"></p>
+      <figcaption><b>Fig. K</b>Share of the dense ResNet-18's work and time that remains. Latency is single-thread fp32, batch size 1, 128 × 128 input, median of repeated passes on an AMD Ryzen 7 7435HS. The main run on a 20-thread server CPU also gave 39% at 30%.</figcaption>
+    </figure>
+
+    <div class="t7">
+      <p>At 30% of the parameters the ResNet-18 needs 0.251 G multiply-accumulates against 0.592 G for the dense network, 58% fewer. Its CPU latency is only 39% lower. We did not profile layer by layer, so the gap is unexplained. The untouched stem, shortcuts and residual widths, or memory traffic and call overhead at batch size one, are the candidates.</p>
+      <p>Then we put in a network nobody had pruned. MobileNetV3-Small has 0.93 M parameters and needs 0.018 G multiply-accumulates, about 32 times fewer than the dense ResNet-18. It runs in 8.8 ms on the laptop CPU against 40.6 ms. On RESISC45 it scores 88.1% against 87.2% for the dense ResNet-18, and on EuroSAT-MS 74.7% against 64.7%.</p>
+    </div>
+    <aside class="m4"><div class="note" style="--rot:2deg;margin-top:18px">where did the other 19 points go? we did not profile it
+      <svg viewBox="0 0 74 54" aria-hidden="true"><path d="M8 6 C 30 4, 52 18, 60 44"/><path d="M50 40 L61 46 L64 33"/></svg></div></aside>
+
+    <figure class="fig w12" id="fig-squares">
+      <div class="ctrl"><span class="lab">5-shot accuracy on</span><div class="seg" role="group" aria-label="Test set" id="seg-sq"></div></div>
+      <div class="squares" id="squares"></div>
+      <figcaption><b>Fig. L</b>Area is proportional to multiply-accumulates per image. Each pruned network is the best of its family by the Taylor score.</figcaption>
+    </figure>
+
+    <div class="t7">
+      <p>It beat every pruned network we built on all three novel-class sets. EfficientNet-B0 scored higher still on RESISC45 and PlantVillage. PlantDoc, photographs taken in the field, is the exception: a ResNet-18 kept at 50% is 1.6 points ahead of MobileNetV3-Small there.</p>
+    </div>
+    <figure class="fig w12" id="fig-scatter">
+      <div class="ctrl"><span class="lab">Test on</span><div class="seg" role="group" aria-label="Test set" id="seg-scatter"></div></div>
+      <div class="legend" id="leg-scatter"></div>
+      <div class="chart" id="chart-scatter" role="img" aria-label="Scatter plot of 5-shot accuracy against multiply-accumulates for every pruned network and the unpruned compact networks"></div>
+      <figcaption><b>Fig. M</b>5-shot accuracy against multiply-accumulates, log scale. Every dot is a pruned network we trained, one per score, schedule and budget. The dashed line is the unpruned MobileNetV3-Small: nothing pruned reaches it.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ===================================================== BANDS -->
+<section class="band sec" id="bands" aria-labelledby="bands-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head">
+        <h2 id="bands-h">Do the thirteen bands help?</h2>
+        <p>EuroSAT-MS patches carry all 13 Sentinel-2 bands, from coastal blue to shortwave infrared. We let the ResNet-18 see all of them by repeating its ImageNet first-layer filters over the bands and scaling them by 3/13. The control sees only the three visible bands through the unmodified filters.</p>
+      </div>
+      <p>The case for thirteen bands is physical. Water turns dark once you leave the visible bands. Healthy crops jump between red and near infrared. Bare soil climbs steadily, and a white roof stays bright everywhere. The picture below is one real Sentinel-2 scene at full 10 m resolution. Each pin marks a spot, and its curve shows what that spot reflects in every band.</p>
+    </div>
+
+    <figure class="fig w12" id="fig-scene">
+      <div class="scene-wrap">
+        <div class="scene" id="scene">
+          <img src="assets/img/scene/true_900.jpg" alt="Satellite view of a town beside a river, with fields around it and white-roofed warehouses to the east; six spots are marked" width="900" height="900">
+          <svg id="scene-svg" viewBox="0 0 900 900" role="group" aria-label="Six marked spots on the scene"></svg>
+        </div>
+        <div>
+          <div class="chart" id="chart-spectra" role="img" aria-label="Reflectance of six marked spots across twelve Sentinel-2 bands"></div>
+          <p class="readout" id="read-spectra"></p>
+        </div>
+      </div>
+      <figcaption><b>Fig. N</b>A 9 km window of Sentinel-2 over Piacenza on the Po, Italy (11 July 2024, 10 m pixels), with six marked spots and what each reflects in twelve bands. Level-2A data have no cirrus band, which EuroSAT keeps. The white square is the size of one EuroSAT patch, 64 × 64 pixels or 640 m; the study uses those patches.</figcaption>
+    </figure>
+
+    <div class="t7">
+      <p>The same twelve bands, as pictures. The visible ones show roughly what an eye would see. Past red the river goes black and living crops turn bright, and shortwave infrared separates damp ground from dry.</p>
+    </div>
+    <figure class="fig w12" id="fig-bands">
+      <div class="bracket"><svg id="band-bracket" aria-hidden="true"></svg></div>
+      <div class="bands" id="bands-sheet"></div>
+      <div class="comps" id="comps"></div>
+      <figcaption><b>Fig. O</b>The scene in twelve bands, each stretched on its own, and four ways to combine them. B02, B03, B04 and B08 have 10 m pixels, B05 to B07, B8A, B11 and B12 have 20 m, and B01 and B09 have 60 m, so those two are soft by nature. The three bands outlined in green are the RGB control.</figcaption>
+    </figure>
+
+    <div class="t7">
+      <p>On the five partitions that have both inputs, the dense network scored <b class="num" id="b13">62.1%</b> with 13 bands and <b class="num" id="b3">68.7%</b> with the three visible ones, a difference of −6.6 points with a 95% interval of −17.4 to +4.2. The 13-band input was ahead in 2 of the 5 partitions.</p>
+      <p>That is a statement about a naive first layer, and the answer depends on how the filters were initialised. It does not show that multispectral data is unhelpful.</p>
+    </div>
+    <div class="w12 vsgrid" id="vs-bands"></div>
+  </div>
+</section>
+
+<!-- ===================================================== ADVICE -->
+<section class="sec" id="advice" aria-labelledby="advice-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head"><h2 id="advice-h">What we would do</h2></div>
+      <ol class="todo">
+        <li><svg viewBox="0 0 48 48" aria-hidden="true"><g filter="url(#wob)"><path d="M6 26 L19 40 L43 8"/></g></svg>
+          <div><h3>Try a small pretrained network first</h3><p>Before pruning anything for few-shot classification of optical patches, test MobileNetV3-Small. It needed no pruning at all, and it beat everything we pruned.</p></div></li>
+        <li><svg viewBox="0 0 48 48" aria-hidden="true"><g filter="url(#wob)"><path d="M6 26 L19 40 L43 8"/></g></svg>
+          <div><h3>If you have to prune, use Taylor and skip the meta stage</h3><p>Taylor was the only score that beat random choice, and in the three settings we checked one partition at a time it was ahead in all ten. The meta stage did not raise 5-shot accuracy.</p></div></li>
+        <li><svg viewBox="0 0 48 48" aria-hidden="true"><g filter="url(#wob)"><path d="M6 26 L19 40 L43 8"/></g></svg>
+          <div><h3>Report many partitions, with paired episodes</h3><p>Single EuroSAT-MS partitions of the unpruned network range from 54.0% to 71.2%. One partition can hide any difference between scores, or invent one.</p></div></li>
+      </ol>
+    </div>
+    <aside class="m4"><div class="note" style="--rot:-3deg;margin-top:70px">the boring baseline won. check it before you build the clever thing</div></aside>
+  </div>
+</section>
+
+<!-- ===================================================== CAVEATS -->
+<section class="band sec" id="caveats" aria-labelledby="caveats-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head"><h2 id="caveats-h">Where we could be wrong</h2>
+        <p>Five to ten partitions are still few. The paired intervals have a mean half-width of 0.6 points on RESISC45 and 2.1, 2.1 and 1.5 on EuroSAT-MS, PlantVillage and PlantDoc, so "indistinguishable" means not distinguishable at that width. It does not mean equal.</p></div>
+    </div>
+    <ul class="doubts w12">
+      <li><b>One training run per method and partition.</b> The paired intervals include training noise. Rerunning the same code and seeds on a laptop GPU (an RTX 3050) moved the 5-shot accuracy of a single run by 1.0 points on average and by up to 5.1, over 95 runs of 2 partitions.</li>
+      <li><b>One recipe for the episodic stage.</b> A single learning rate, chosen on PlantVillage at the smallest value of its grid, was used everywhere. The compact networks were not tuned at all.</li>
+      <li><b>"Novel" means novel to the base classes, not to ImageNet.</b> ImageNet has seen airplanes, ships and tennis courts. EuroSAT-MS has ten classes, so its novel-class numbers rest on a five-class base set.</li>
+      <li><b>Resized scenes.</b> RESISC45 scenes were shrunk from 256 to 128 pixels, which changes the ground sampling distance. The class-disjoint split does not separate neighbouring tiles geographically.</li>
+      <li><b>PlantVillage may read high.</b> It holds several photographs of the same leaf, and we did not keep them apart between support and query.</li>
+      <li><b>No hardware.</b> We ran nothing on a Raspberry Pi, a Jetson or an on-board accelerator and measured no energy. Only the inner channels of a ResNet-18 and a MobileNetV2 were pruned.</li>
+    </ul>
+    <div class="w12">
+      <p class="small" style="margin-top:6px">Not tested, so nothing on this page speaks to them:</p>
+      <ul class="untested"><li>coordinates</li><li>acquisition dates</li><li>radar</li><li>full scenes</li><li>satellite-pretrained backbones</li><li>embedded hardware</li><li>energy use</li></ul>
+      <p style="margin-top:28px;max-width:70ch">This is a benchmarking study on Earth-observation data. It is not a geospatial method.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================================================== REPRODUCE -->
+<section class="sec" id="repro" aria-labelledby="repro-h">
+  <div class="wrap grid">
+    <div class="t7">
+      <div class="sec-head"><h2 id="repro-h">Run it yourself</h2>
+        <p>Every number on this page comes from saved runs, and two notebooks retrain everything and rebuild every table, figure and PDF. Press <em>Run all</em>, wait, then press <em>Results</em> for a zip of every run.</p></div>
+    </div>
+    <div class="w12 repro">
+      <div><div class="n">≈ 130</div><div class="d">models trained per class partition by the main notebook, about two hours on an RTX 6000-class GPU</div></div>
+      <div><div class="n">≈ 5 GB</div><div class="d">of datasets fetched from the Hugging Face Hub: RESISC45, EuroSAT-MSI, PlantVillage, PlantDoc</div></div>
+      <div><div class="n">+ 1.5 h</div><div class="d">for the second notebook: partitions 5 to 9 and the MobileNetV2 runs</div></div>
+    </div>
+    <div class="w12">
+      <div class="reveal-box during-review"><h3>Links after the decision</h3><p>The paper, the code, the notebooks and the author list are withheld while the paper is under double-blind review. They appear here once it is decided.</p></div>
+      <div class="reveal-box after-review" id="authors"><h3>Paper, code and authors</h3>
+        <p>[Add after review: author list and affiliations.]</p>
+        <p><a href="#">Paper (PDF)</a> · <a href="#">Code and notebooks</a> · <a href="#">Supplement</a></p>
+      </div>
+      <details class="data" id="tbl1-wrap" style="margin-top:34px"><summary>Every score at 30%, all four test sets (the paper's Table 1)</summary><div class="tablewrap" id="tbl1"></div></details>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="site">
+  <div class="wrap">
+    <div class="cols">
+      <div><h4>Pictures</h4><p>Aerial scenes are samples of NWPU-RESISC45 (Cheng, Han and Lu, Proc. IEEE 2017) and leaves of PlantVillage (Hughes and Salathé, 2015). The scene in Fig. N and O is Sentinel-2B, tile 32TNQ, 11 July 2024: contains modified Copernicus Sentinel data (2024), read from the public Sentinel-2 files on AWS. The study's 13-band patches come from EuroSAT (Helber et al., IEEE JSTARS 2019).</p></div>
+      <div><h4>Data on this page</h4><p>Charts are drawn from the study's saved runs. Paired differences use the per-partition values and a 95% t-interval over partitions. Where a chart shows fewer than ten partitions the caption says so.</p></div>
+      <div><h4>Colours and type</h4><p>Green is Taylor, orange is DACIS and its three parts, blue is filter L1, violet is BatchNorm scale and grey is random choice. Shapes repeat the colours for readers who need them. Set in IBM Plex Sans, Source Serif 4 and IBM Plex Mono; the pen is Nanum Pen Script.</p></div>
+    </div>
+  </div>
+</footer>
+
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script src="assets/js/data.js"></script>
+<script src="assets/js/scene.js"></script>
+<script src="assets/js/pen.js"></script>
+<script src="assets/js/charts.js"></script>
+<script src="assets/js/figs.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
